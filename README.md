@@ -85,9 +85,138 @@ The following points below summarizes the use of every file/folder available for
 26. setup.sh : Additional file for Heroku model deployment
 
 The following sections below explains the three main approaches that can be used for model deployment in this project:
-1. <b>Cloud Platform (Heroku)</b>
-2. <b>Local system</b>
-3. <b>Docker</b>
+1. <b>Local environment</b>
+2. <b>Docker</b>
+3. <b>Cloud Platform (Heroku with Docker)</b>
+
+**Project Instructions (Local Environment)**
+---  
+If you prefer to deploy this project on your local machine system, the steps for deploying this project has been simplified down to the following:
+
+1. Download and extract the zip file from this github repository into your local machine system.
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
+
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
+
+3. Open MySQL in your local machine system and create a new database name of your choice with the following syntax: 
+```
+CREATE DATABASE db_name;
+```
+- Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
+  
+4. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
+```
+logins = {"host": <host_name>, 
+          "user": <user_name>, 
+          "password": <password>, 
+          "dbname": <new_local_database_name>} 
+```
+- For security reasons, this file needs to be stored in private. (Default host is localhost and user is root for MySQL)
+  
+5. Open anaconda prompt and create a new environment with the following syntax: 
+```
+conda create -n myenv python=3.10
+```
+- Note that you will need to install anaconda if not available in your local system: https://www.anaconda.com/
+
+6. After creating a new anaconda environment, activate the environment using the following command: 
+```
+conda activate myenv
+```
+
+7. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
+```
+pip install -r requirements.txt
+```
+
+8. After installing all the required Python libraries, run the following command on your project directory: 
+```
+streamlit run main.py
+```
+
+9. A new browser will open after successfully running the streamlit app with the following interface::
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
+
+10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
+
+**Project Instructions (Docker)**
+---
+
+<img src="https://user-images.githubusercontent.com/34255556/195037066-21347c07-217e-4ecd-9fef-4e7f8cf3e098.png" width="600">
+
+A suitable alternative for deploying this project is to use Docker, which allows easy deployment on other running instances. 
+  
+<b>Note that docker image is created under Windows Operating system for this project, therefore these instructions will only work on other windows instances.</b>
+
+<b> For deploying this project onto Docker, the following additional files are essential</b>:
+- DockerFile
+- requirements.txt
+- setup.py
+
+Docker Desktop needs to be installed into your local system, before proceeding with the following steps:
+
+1. Download and extract the zip file from this github repository into your local machine system.
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
+
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
+
+3. Create the following volumes (mysql and mysql configuration) and network in Docker for connecting between database container and application container using the following syntax:
+```
+docker volume create mysql
+docker volume create mysql_config
+docker network create mysqlnet
+```
+- Note that the naming conventions for both volumes and network can be changed.
+
+4. Run the following docker volumes and network for creating a new MySQL container in Docker:
+```
+docker run --rm -d -v mysql:/var/lib/mysql -v mysql_config:/etc/mysql -p 3307:3306 --network mysqlnet --name mysqldb -e MYSQL_ROOT_PASSWORD=custom_password mysql
+```
+Note that mysqldb refers to the name of the container, which will also be host name of database.
+
+5. For checking if the MySQL container has been created successfully, the following command can be executed on a separate command prompt, which will prompt the user to enter root password defined in previous step:
+```
+docker exec -ti mysqldb mysql -u root -p
+```
+  
+6. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
+```
+logins = {"host": <host_name>, 
+          "user": <user_name>, 
+          "password": <password>, 
+          "dbname": <default_database_name>} 
+```
+- For security reasons, this file needs to be stored in private. (Default host is container name defined in step 4 and user is root for MySQL)
+
+7. Create a file named Dockerfile with the following commands:
+<img src="https://user-images.githubusercontent.com/34255556/195380388-ec1260b0-2228-41f4-9ec7-452e35dae65f.png">
+- Note that any future changes in the Dockerfile or other files within the folder requires creating a new docker image.
+
+8. Build a new docker image on the project directory with the following command:
+```
+docker build -t api-name .
+```
+
+9. Run the docker image on the project directory with the following command: 
+```
+docker run --network mysqlnet -e PORT=8501 -p 8501:8501 api-name
+```
+Note that the command above creates a new docker app container with the given image "api-name". Adding network onto the docker app container will allow connection between two separate docker containers.
+
+10. A new browser will open after successfully running the streamlit app with the following interface:
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
+
+Browser for the application can be opened from Docker Desktop by clicking on the specific button shown below:
+![image](https://user-images.githubusercontent.com/34255556/195381876-b3377125-a9c1-46c0-aa4f-9734c430638d.png)
+
+11. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
+
+12. After running all steps of the pipeline, run the following command to extract files from a specific directory within the docker container to host machine for viewing:
+```
+docker cp <container-id>:<source-dir> <destination-dir>
+```
 
 **Project Instructions (Heroku)**
 ---
@@ -143,116 +272,6 @@ For replicating the steps required for running this project on your own Heroku a
 <img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
 <b>Important Note: Using "free" dynos on Heroku app only allows the app to run for a maximum of 30 minutes. Since the model training and prediction process takes a long time, consider changing the dynos type to "hobby" for unlimited time, which cost about $7 per month per dyno. You may also consider changing the dynos type to Standard 1X/2X for enhanced app performance.</b>
-
-**Project Instructions (Local Environment)**
----  
-If you prefer to deploy this project on your local machine system, the steps for deploying this project has been simplified down to the following:
-
-1. Download and extract the zip file from this github repository into your local machine system.
-<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
-
-2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
-
-3. Open MySQL in your local machine system and create a new database name of your choice with the following syntax: 
-```
-CREATE DATABASE db_name;
-```
-- Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
-  
-4. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
-```
-logins = {"host": <host_name>, 
-          "user": <user_name>, 
-          "password": <password>, 
-          "dbname": <new_local_database_name>} 
-```
-- For security reasons, this file needs to be stored in private. (Default host is localhost and user is root for MySQL)
-  
-5. Open anaconda prompt and create a new environment with the following syntax: 
-```
-conda create -n myenv python=3.10
-```
-- Note that you will need to install anaconda if not available in your local system: https://www.anaconda.com/
-
-6. After creating a new anaconda environment, activate the environment using the following command: 
-```
-conda activate myenv
-```
-
-7. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
-```
-pip install -r requirements.txt
-```
-
-8. After installing all the required Python libraries, run the following command on your project directory: 
-```
-streamlit run main.py
-```
-
-9. A new browser will open after successfully running the streamlit app with the following interface::
-<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
-
-10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
-<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
-
-**Project Instructions (Docker)**
----
-<img src="https://user-images.githubusercontent.com/34255556/195037066-21347c07-217e-4ecd-9fef-4e7f8cf3e098.png" width="600">
-
-A suitable alternative for deploying this project is to use Docker, which allows easy deployment on other running instances. 
-  
-<b>Note that docker image is created under Windows Operating system for this project, therefore these instructions will only work on other windows instances.</b>
-
-<b> For deploying this project onto Docker, the following additional files are essential</b>:
-- DockerFile
-- requirements.txt
-- setup.py
-
-Docker Desktop needs to be installed into your local system, before proceeding with the following steps:
-
-1. Download and extract the zip file from this github repository into your local machine system.
-<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
-
-2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
-  
-3. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
-```
-logins = {"host": <host_name>, 
-          "user": <user_name>, 
-          "password": <password>, 
-          "dbname": <default_database_name>} 
-```
-- For security reasons, this file needs to be stored in private.
-  
-4. Create a file named Dockerfile with the following commands:
-
-<img src="https://user-images.githubusercontent.com/34255556/195033310-97aab7cb-060e-4a6c-af08-e03e3083f556.png">
-
-Note that any future changes in the Dockerfile or other files within the folder requires creating a new docker image.
-
-5. Build a new docker image on the project directory with the following command:
-```
-docker build -t api-name .
-```
-
-6. Run the docker image on the project directory with the following command: 
-```
-docker run -ti api-name
-```
-Note that the command above creates a new docker container with the given image "api-name".
-
-7. A new browser will open after successfully running the streamlit app with the following interface::
-
-<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
-
-8. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
-
-<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
-
-9. After running all steps of the pipeline, run the following command to extract files from a specific directory within the docker container to host machine for viewing:
-```
-docker cp <container-id>:<source-dir> <destination-dir>
-```
 
 **Initial Data Cleaning/Feature Engineering**
 ---
