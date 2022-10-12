@@ -1,0 +1,23 @@
+BorutaShap==1.0.16
+catboost==1.0.6
+feature-engine==1.4.1
+featurewiz==0.1.996
+imbalanced-learn==0.9.1
+joblib==1.1.0
+kaleido==0.2.1
+lightgbm==3.3.2
+matplotlib==3.5.3
+mysql-connector-python==8.0.30
+numpy==1.23.3
+optuna==3.0.2
+pandas==1.4.4
+plotly==5.10.0
+scikit-learn==1.1.2
+scipy==1.8.1
+seaborn==0.11.2
+shap==0.41.0
+streamlit==1.13.0
+tqdm==4.64.1
+xgboost==1.6.2
+yellowbrick==1.5
+-e .

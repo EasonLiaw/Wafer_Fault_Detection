@@ -1,0 +1,64 @@
+2022-06-23/10:19:48		Start of data preprocessing
+2022-06-23/10:19:48		Start reading compiled data from database
+2022-06-23/10:19:48		Finish reading compiled data from database
+2022-06-23/10:19:48		Start handling duplicated rows in the dataset
+2022-06-23/10:19:48		No duplicated rows found in the dataset
+2022-06-23/10:19:48		Finish handling duplicated rows in the dataset
+2022-06-23/10:19:48		Start imputing missing values in the dataset
+2022-06-23/10:19:48		Start imputing missing values in the dataset
+2022-06-23/10:19:48		Start imputing missing values in the dataset
+2022-06-23/10:19:53		The following columns have been imputed using iterative strategy: ['Sensor1', 'Sensor2', 'Sensor3', 'Sensor4', 'Sensor5', 'Sensor6', 'Sensor7', 'Sensor8', 'Sensor9', 'Sensor10', 'Sensor11', 'Sensor12', 'Sensor13', 'Sensor14', 'Sensor15', 'Sensor16', 'Sensor17', 'Sensor18', 'Sensor19', 'Sensor22', 'Sensor23', 'Sensor24', 'Sensor25', 'Sensor26', 'Sensor27', 'Sensor28', 'Sensor29', 'Sensor30', 'Sensor31', 'Sensor32', 'Sensor41', 'Sensor42', 'Sensor54', 'Sensor55', 'Sensor56', 'Sensor57', 'Sensor58', 'Sensor59', 'Sensor60', 'Sensor61', 'Sensor62', 'Sensor63', 'Sensor64', 'Sensor65', 'Sensor66', 'Sensor67', 'Sensor68', 'Sensor69', 'Sensor70', 'Sensor71', 'Sensor72', 'Sensor73', 'Sensor74', 'Sensor75', 'Sensor76', 'Sensor77', 'Sensor78', 'Sensor79', 'Sensor80', 'Sensor81', 'Sensor82', 'Sensor83', 'Sensor85', 'Sensor86', 'Sensor90', 'Sensor91', 'Sensor92', 'Sensor93', 'Sensor94', 'Sensor95', 'Sensor96', 'Sensor97', 'Sensor98', 'Sensor99', 'Sensor100', 'Sensor101', 'Sensor102', 'Sensor103', 'Sensor104', 'Sensor105', 'Sensor106', 'Sensor107', 'Sensor108', 'Sensor109', 'Sensor110', 'Sensor111', 'Sensor112', 'Sensor113', 'Sensor119', 'Sensor122', 'Sensor123', 'Sensor124', 'Sensor125', 'Sensor126', 'Sensor127', 'Sensor128', 'Sensor129', 'Sensor130', 'Sensor131', 'Sensor132', 'Sensor133', 'Sensor134', 'Sensor135', 'Sensor137', 'Sensor138', 'Sensor139', 'Sensor140', 'Sensor141', 'Sensor142', 'Sensor143', 'Sensor144', 'Sensor145', 'Sensor146', 'Sensor147', 'Sensor148', 'Sensor149', 'Sensor150', 'Sensor151', 'Sensor152', 'Sensor153', 'Sensor154', 'Sensor155', 'Sensor160', 'Sensor161', 'Sensor162', 'Sensor163', 'Sensor164', 'Sensor165', 'Sensor166', 'Sensor167', 'Sensor168', 'Sensor169', 'Sensor170', 'Sensor179', 'Sensor191', 'Sensor192', 'Sensor193', 'Sensor194', 'Sensor195', 'Sensor196', 'Sensor197', 'Sensor198', 'Sensor199', 'Sensor200', 'Sensor201', 'Sensor202', 'Sensor203', 'Sensor204', 'Sensor205', 'Sensor206', 'Sensor207', 'Sensor208', 'Sensor209', 'Sensor210', 'Sensor211', 'Sensor212', 'Sensor213', 'Sensor214', 'Sensor215', 'Sensor216', 'Sensor217', 'Sensor218', 'Sensor220', 'Sensor221', 'Sensor225', 'Sensor226', 'Sensor227', 'Sensor228', 'Sensor229', 'Sensor230', 'Sensor231', 'Sensor232', 'Sensor233', 'Sensor234', 'Sensor235', 'Sensor236', 'Sensor237', 'Sensor238', 'Sensor239', 'Sensor240', 'Sensor241', 'Sensor242', 'Sensor243', 'Sensor244', 'Sensor245', 'Sensor246', 'Sensor247', 'Sensor248', 'Sensor254', 'Sensor257', 'Sensor258', 'Sensor259', 'Sensor260', 'Sensor261', 'Sensor262', 'Sensor263', 'Sensor264', 'Sensor265', 'Sensor266', 'Sensor267', 'Sensor268', 'Sensor269', 'Sensor270', 'Sensor272', 'Sensor273', 'Sensor274', 'Sensor275', 'Sensor276', 'Sensor277', 'Sensor278', 'Sensor279', 'Sensor280', 'Sensor281', 'Sensor282', 'Sensor283', 'Sensor284', 'Sensor285', 'Sensor286', 'Sensor287', 'Sensor288', 'Sensor289', 'Sensor290', 'Sensor295', 'Sensor296', 'Sensor297', 'Sensor298', 'Sensor299', 'Sensor300', 'Sensor301', 'Sensor302', 'Sensor303', 'Sensor304', 'Sensor305', 'Sensor314', 'Sensor315', 'Sensor327', 'Sensor328', 'Sensor329', 'Sensor330', 'Sensor331', 'Sensor332', 'Sensor333', 'Sensor334', 'Sensor335', 'Sensor336', 'Sensor337', 'Sensor338', 'Sensor339', 'Sensor340', 'Sensor341', 'Sensor342', 'Sensor343', 'Sensor344', 'Sensor345', 'Sensor346', 'Sensor347', 'Sensor348', 'Sensor349', 'Sensor350', 'Sensor351', 'Sensor352', 'Sensor353', 'Sensor354', 'Sensor355', 'Sensor356', 'Sensor358', 'Sensor359', 'Sensor363', 'Sensor364', 'Sensor365', 'Sensor366', 'Sensor367', 'Sensor368', 'Sensor369', 'Sensor370', 'Sensor371', 'Sensor372', 'Sensor373', 'Sensor374', 'Sensor375', 'Sensor376', 'Sensor377', 'Sensor378', 'Sensor379', 'Sensor380', 'Sensor381', 'Sensor382', 'Sensor383', 'Sensor384', 'Sensor385', 'Sensor386', 'Sensor392', 'Sensor395', 'Sensor396', 'Sensor397', 'Sensor398', 'Sensor399', 'Sensor400', 'Sensor401', 'Sensor402', 'Sensor403', 'Sensor404', 'Sensor405', 'Sensor406', 'Sensor407', 'Sensor408', 'Sensor410', 'Sensor411', 'Sensor412', 'Sensor413', 'Sensor414', 'Sensor415', 'Sensor416', 'Sensor417', 'Sensor418', 'Sensor419', 'Sensor420', 'Sensor421', 'Sensor422', 'Sensor423', 'Sensor424', 'Sensor425', 'Sensor426', 'Sensor427', 'Sensor428', 'Sensor431', 'Sensor432', 'Sensor433', 'Sensor434', 'Sensor435', 'Sensor436', 'Sensor437', 'Sensor438', 'Sensor439', 'Sensor440', 'Sensor441', 'Sensor450', 'Sensor451', 'Sensor463', 'Sensor464', 'Sensor465', 'Sensor466', 'Sensor467', 'Sensor468', 'Sensor469', 'Sensor470', 'Sensor471', 'Sensor472', 'Sensor473', 'Sensor474', 'Sensor475', 'Sensor476', 'Sensor477', 'Sensor478', 'Sensor479', 'Sensor480', 'Sensor481', 'Sensor482', 'Sensor483', 'Sensor484', 'Sensor485', 'Sensor486', 'Sensor487', 'Sensor488', 'Sensor489', 'Sensor490', 'Sensor492', 'Sensor493', 'Sensor497', 'Sensor498', 'Sensor499', 'Sensor500', 'Sensor501', 'Sensor502', 'Sensor503', 'Sensor504', 'Sensor505', 'Sensor506', 'Sensor507', 'Sensor508', 'Sensor509', 'Sensor510', 'Sensor511', 'Sensor512', 'Sensor513', 'Sensor514', 'Sensor515', 'Sensor516', 'Sensor517', 'Sensor518', 'Sensor519', 'Sensor520', 'Sensor526', 'Sensor529', 'Sensor530', 'Sensor531', 'Sensor532', 'Sensor533', 'Sensor534', 'Sensor535', 'Sensor536', 'Sensor537', 'Sensor538', 'Sensor539', 'Sensor540', 'Sensor541', 'Sensor542', 'Sensor543', 'Sensor544', 'Sensor545', 'Sensor546', 'Sensor547', 'Sensor548', 'Sensor549', 'Sensor550', 'Sensor551', 'Sensor552', 'Sensor553', 'Sensor554', 'Sensor555', 'Sensor556', 'Sensor557', 'Sensor558', 'Sensor563', 'Sensor564', 'Sensor565', 'Sensor566', 'Sensor567', 'Sensor568', 'Sensor569', 'Sensor570', 'Sensor579', 'Sensor580', 'Sensor581', 'Sensor582']
+2022-06-23/10:19:53		Start capping outliers using iqr method
+2022-06-23/10:19:54		Finish capping outliers using iqr method
+2022-06-23/10:19:54		Start capping outliers using gaussian method
+2022-06-23/10:19:54		Finish capping outliers using gaussian method
+2022-06-23/10:19:54		Start removing features with constant variance
+2022-06-23/10:19:54		Following set of features were removed due to having constant variance: ['Sensor6', 'Sensor14', 'Sensor43', 'Sensor50', 'Sensor53', 'Sensor70', 'Sensor75', 'Sensor98', 'Sensor115', 'Sensor142', 'Sensor150', 'Sensor179', 'Sensor180', 'Sensor187', 'Sensor190', 'Sensor191', 'Sensor192', 'Sensor193', 'Sensor194', 'Sensor195', 'Sensor207', 'Sensor210', 'Sensor227', 'Sensor230', 'Sensor231', 'Sensor232', 'Sensor233', 'Sensor234', 'Sensor235', 'Sensor236', 'Sensor237', 'Sensor238', 'Sensor241', 'Sensor242', 'Sensor243', 'Sensor244', 'Sensor250', 'Sensor257', 'Sensor258', 'Sensor259', 'Sensor260', 'Sensor261', 'Sensor262', 'Sensor263', 'Sensor264', 'Sensor265', 'Sensor266', 'Sensor267', 'Sensor277', 'Sensor285', 'Sensor314', 'Sensor315', 'Sensor316', 'Sensor323', 'Sensor326', 'Sensor327', 'Sensor328', 'Sensor329', 'Sensor330', 'Sensor331', 'Sensor343', 'Sensor348', 'Sensor365', 'Sensor370', 'Sensor371', 'Sensor372', 'Sensor373', 'Sensor374', 'Sensor375', 'Sensor376', 'Sensor379', 'Sensor380', 'Sensor381', 'Sensor382', 'Sensor388', 'Sensor395', 'Sensor396', 'Sensor397', 'Sensor398', 'Sensor399', 'Sensor400', 'Sensor401', 'Sensor402', 'Sensor403', 'Sensor404', 'Sensor405', 'Sensor415', 'Sensor423', 'Sensor450', 'Sensor451', 'Sensor452', 'Sensor459', 'Sensor462', 'Sensor463', 'Sensor464', 'Sensor465', 'Sensor466', 'Sensor467', 'Sensor479', 'Sensor482', 'Sensor499', 'Sensor502', 'Sensor503', 'Sensor504', 'Sensor505', 'Sensor506', 'Sensor507', 'Sensor508', 'Sensor509', 'Sensor510', 'Sensor513', 'Sensor514', 'Sensor515', 'Sensor516', 'Sensor522', 'Sensor529', 'Sensor530', 'Sensor531', 'Sensor532', 'Sensor533', 'Sensor534', 'Sensor535', 'Sensor536', 'Sensor537', 'Sensor538', 'Sensor539']
+2022-06-23/10:19:54		Finish removing features with constant variance
+2022-06-23/10:19:54		Start transforming non gaussian columns to gaussian columns
+2022-06-23/10:19:54		yeo-johnson transformation is applied to ['Sensor10', 'Sensor104', 'Sensor114', 'Sensor152', 'Sensor176', 'Sensor2', 'Sensor224', 'Sensor251', 'Sensor254', 'Sensor287', 'Sensor295', 'Sensor338', 'Sensor339', 'Sensor389', 'Sensor392', 'Sensor425', 'Sensor447', 'Sensor478', 'Sensor523', 'Sensor62', 'Sensor77', 'Sensor81'] columns
+2022-06-23/10:19:54		square-root transformation is applied to ['Sensor146', 'Sensor161', 'Sensor164', 'Sensor165', 'Sensor166', 'Sensor169', 'Sensor206', 'Sensor239', 'Sensor240', 'Sensor296', 'Sensor299', 'Sensor300', 'Sensor301', 'Sensor303', 'Sensor304', 'Sensor342', 'Sensor346', 'Sensor357', 'Sensor432', 'Sensor435', 'Sensor436', 'Sensor437', 'Sensor440', 'Sensor526'] columns
+2022-06-23/10:19:54		logarithmic transformation is applied to ['Sensor181', 'Sensor205', 'Sensor211', 'Sensor219', 'Sensor226', 'Sensor322', 'Sensor341', 'Sensor349', 'Sensor364', 'Sensor438', 'Sensor453', 'Sensor461', 'Sensor491', 'Sensor496', 'Sensor498', 'Sensor511', 'Sensor63', 'Sensor73'] columns
+2022-06-23/10:19:54		reciprocal transformation is applied to ['Sensor9'] columns
+2022-06-23/10:19:54		Finish transforming non gaussian columns to gaussian columns
+2022-06-23/10:19:54		End of data preprocessing
+2022-10-06/16:44:25		Start of data preprocessing
+2022-10-06/16:44:25		Start reading compiled data from database
+2022-10-06/16:44:25		Finish reading compiled data from database
+2022-10-06/16:44:25		Start handling duplicated rows in the dataset
+2022-10-06/16:44:25		No duplicated rows found in the dataset
+2022-10-06/16:44:25		Finish handling duplicated rows in the dataset
+2022-10-06/16:44:25		Start adding missing indicator to features with missing values
+2022-10-06/16:46:54		Start of data preprocessing
+2022-10-06/16:46:54		Start reading compiled data from database
+2022-10-06/16:46:54		Finish reading compiled data from database
+2022-10-06/16:46:54		Start handling duplicated rows in the dataset
+2022-10-06/16:46:54		No duplicated rows found in the dataset
+2022-10-06/16:46:54		Finish handling duplicated rows in the dataset
+2022-10-06/16:46:54		Start adding missing indicator to features with missing values
+2022-10-06/16:48:20		Start of data preprocessing
+2022-10-06/16:48:20		Start reading compiled data from database
+2022-10-06/16:48:20		Finish reading compiled data from database
+2022-10-06/16:48:20		Start handling duplicated rows in the dataset
+2022-10-06/16:48:20		No duplicated rows found in the dataset
+2022-10-06/16:48:20		Finish handling duplicated rows in the dataset
+2022-10-06/16:48:20		Start adding missing indicator to features with missing values
+2022-10-06/16:48:20		Finish adding missing indicator to features with missing values
+2022-10-06/16:48:20		Start adding zero indicator to features
+2022-10-06/16:48:20		Finish adding zero indicator to features
+2022-10-06/16:48:20		Start removing features with constant variance
+2022-10-06/16:48:20		Finish removing features with constant variance
+2022-10-06/16:48:21		End of data preprocessing
+2022-10-09/21:22:55		Start of data preprocessing
+2022-10-09/21:22:55		Start reading compiled data from database
+2022-10-09/21:22:55		Finish reading compiled data from database
+2022-10-09/21:22:55		Start handling duplicated rows in the dataset
+2022-10-09/21:22:55		No duplicated rows found in the dataset
+2022-10-09/21:22:55		Finish handling duplicated rows in the dataset
+2022-10-09/21:22:55		Start adding missing indicator to features with missing values
+2022-10-09/21:22:55		Finish adding missing indicator to features with missing values
+2022-10-09/21:22:55		Start adding zero indicator to features
+2022-10-09/21:22:55		Finish adding zero indicator to features
+2022-10-09/21:22:55		Start removing features with constant variance
+2022-10-09/21:22:55		Finish removing features with constant variance
+2022-10-09/21:22:56		End of data preprocessing
