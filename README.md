@@ -102,7 +102,7 @@ The following sections below explains the three main approaches that can be used
 
 For replicating the steps required for running this project on your own Heroku account, the following steps are required:
 1. Clone this github repository into your local machine system or your own Github account if available.
-<img src="https://user-images.githubusercontent.com/34255556/194993838-1a7f9078-bf6f-4117-8578-35cff7936d24.png" width="600" height="200">
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
 
 2. Delete files stored inside Training_Logs and Prediction_Logs folder, while creating a dummy.txt file inside both folders respectively. This is to ensure both directories exist when the model is deployed into Heroku.
 <img src="https://user-images.githubusercontent.com/34255556/160224012-4f861309-1e7a-40ad-b466-dbdc8e22f20e.png" width="600" height="80">
@@ -132,13 +132,15 @@ For replicating the steps required for running this project on your own Heroku a
 8. After successful model deployment, open the app and you will see the following interface designed using Streamlit:
 <img src="https://user-images.githubusercontent.com/34255556/174513887-d2614ff2-a1d4-4ed5-886a-4ea44045bcc1.png" width="600" height="300">
 
-9. After installing all the required Python libraries, run the following command on your project directory: <b>python main.py</b>
+9. After installing all the required Python libraries, run the following command on your project directory: <b>streamlit run main.py</b>
 
-10. The following prompt will appear as shown in the image below:
+9. A new browser will open after successfully running the streamlit app with the following interface::
 
-![image](https://user-images.githubusercontent.com/34255556/194992826-06710022-6cd1-4329-b1a8-d7fc45162a35.png)
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
 
-Select the first number option [1] to start the entire pipeline process and repeat step 7 for every subsequent number options in sequence to avoid potential errors. 
+10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
 <b>Important Note: Using "free" dynos on Heroku app only allows the app to run for a maximum of 30 minutes. Since the model training and prediction process takes a long time, consider changing the dynos type to "hobby" for unlimited time, which cost about $7 per month per dyno. You may also consider changing the dynos type to Standard 1X/2X for enhanced app performance.</b>
 
@@ -147,16 +149,14 @@ Select the first number option [1] to start the entire pipeline process and repe
 If you prefer to deploy this project on your local machine system, the steps for deploying this project has been simplified down to the following:
 
 1. Download and extract the zip file from this github repository into your local machine system.
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
 
-<img src="https://user-images.githubusercontent.com/34255556/194993838-1a7f9078-bf6f-4117-8578-35cff7936d24.png" width="600" height="200">
-
-2. Empty the files stored inside Training_Logs and Prediction_Logs folder.
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
 
 3. Open MySQL in your local machine system and create a new database name of your choice with the following syntax: 
 ```
 CREATE DATABASE db_name;
 ```
-
 - Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
   
 4. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
@@ -166,13 +166,12 @@ logins = {"host": <host_name>,
           "password": <password>, 
           "dbname": <new_local_database_name>} 
 ```
-- For security reasons, this file needs to be stored in private.
+- For security reasons, this file needs to be stored in private. (Default host is localhost and user is root for MySQL)
   
 5. Open anaconda prompt and create a new environment with the following syntax: 
 ```
 conda create -n myenv python=3.10
 ```
-
 - Note that you will need to install anaconda if not available in your local system: https://www.anaconda.com/
 
 6. After creating a new anaconda environment, activate the environment using the following command: 
@@ -180,21 +179,21 @@ conda create -n myenv python=3.10
 conda activate myenv
 ```
 
-7. Go to the local directory where your downloaded file is located and run the following command to install all the python libraries : 
+7. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
 ```
 pip install -r requirements.txt
 ```
 
 8. After installing all the required Python libraries, run the following command on your project directory: 
 ```
-python main.py
+streamlit run main.py
 ```
 
-9. The following prompt will appear as shown in the image below:
+9. A new browser will open after successfully running the streamlit app with the following interface::
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
 
-![image](https://user-images.githubusercontent.com/34255556/194992826-06710022-6cd1-4329-b1a8-d7fc45162a35.png)
-
-Select the first number option [1] to start the entire pipeline process and repeat step 8 for every subsequent number options in sequence to avoid potential errors. 
+10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
 **Project Instructions (Docker)**
 ---
@@ -204,7 +203,7 @@ A suitable alternative for deploying this project is to use Docker, which allows
   
 <b>Note that docker image is created under Windows Operating system for this project, therefore these instructions will only work on other windows instances.</b>
 
-<b> For deploying models onto Docker, the following additional files are essential</b>:
+<b> For deploying this project onto Docker, the following additional files are essential</b>:
 - DockerFile
 - requirements.txt
 - setup.py
@@ -212,9 +211,9 @@ A suitable alternative for deploying this project is to use Docker, which allows
 Docker Desktop needs to be installed into your local system, before proceeding with the following steps:
 
 1. Download and extract the zip file from this github repository into your local machine system.
-<img src="https://user-images.githubusercontent.com/34255556/194993838-1a7f9078-bf6f-4117-8578-35cff7936d24.png" width="600" height="200">
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
 
-2. Empty the files stored inside Training_Logs and Prediction_Logs folder.  
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
   
 3. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
 ```
@@ -242,20 +241,13 @@ docker run -ti api-name
 ```
 Note that the command above creates a new docker container with the given image "api-name".
 
-7. The following prompt will appear as shown in the image below:
+7. A new browser will open after successfully running the streamlit app with the following interface::
 
-![image](https://user-images.githubusercontent.com/34255556/195035038-9a373579-f08d-4dec-b1ea-1affd0e1fea6.png)
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
 
-Select the first number option [1] to start the entire pipeline process.
+8. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
 
-8. For subsequent steps of the pipeline (steps 2 to 8), run the following command to use the previously created docker container and select the relevant number option:
-```
-docker start -ai container-name
-```
-Note that the name of previously created container can be found by running the following command:
-```
-docker ps -a
-```
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
 9. After running all steps of the pipeline, run the following command to extract files from a specific directory within the docker container to host machine for viewing:
 ```
