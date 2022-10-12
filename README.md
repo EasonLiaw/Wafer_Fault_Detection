@@ -1,6 +1,21 @@
 # Wafer Status Classification Project
 
-**Background**
+## Contents
+- [Background](#background)
+- [Code and Resources Used](#code-and-resources-used)
+- [CRISP-DM Methodology](#crisp-dm-methodology)
+- [Project Architecture Summary](#project-architecture-summary)
+- [Project Folder Structure](#project-folder-structure)
+- [Project Instructions (Local Environment)](#project-instructions-local-environment)
+- [Project Instructions (Docker)](#project-instructions-docker)
+- [Project Instructions (Heroku with Docker)](#project-instructions-heroku-with-docker)
+- [Initial Data Cleaning and Feature Engineering](#initial-data-cleaning-and-feature-engineering)
+- [Model Training Setting](#model-training-setting)
+- [Machine Pipelines Configuration](#machine-pipelines-configuration)
+- [Project Findings](#project-findings)
+- [Legality](#legality)
+
+## Background
 ---
 
 <img src="https://www.semiconductorforu.com/wp-content/uploads/2021/02/silicon-wafer.jpg">
@@ -13,7 +28,7 @@ Dataset is provided in .csv format by client under <b>Training_Batch_Files</b> f
 
 In addition, schema of datasets for training and prediction is provided in .json format by the client for storing seperate csv files into a single MySQL database.
 
-**Code and Resources Used**
+## Code and Resources Used
 ---
 - **Python Version** : 3.10.0
 - **Packages** : borutashap, feature-engine, featurewiz, imbalanced-learn, joblib, catboost, lightgbm, matplotlib, mysql-connector-python, numpy, optuna, pandas, plotly, scikit-learn, scipy, seaborn, shap, tqdm, xgboost, yellowbrick
@@ -37,7 +52,7 @@ In addition, schema of datasets for training and prediction is provided in .json
 - **Scipy documentation**: https://docs.scipy.org/doc/scipy/
 
 
-**CRISP-DM Methodology**
+## CRISP-DM Methodology
 ---
 For any given Machine Learning projects, CRISP-DM (Cross Industry Standard Practice for Data Mining) methodology is the most commonly adapted methodology used.
 The following diagram below represents a simple summary of the CRISP-DM methodology for this project:
@@ -46,7 +61,7 @@ The following diagram below represents a simple summary of the CRISP-DM methodol
 
 Note that an alternative version of this methodology, known as CRISP-ML(Q) (Cross Industry Standard Practice for Machine Learning and Quality Assurance) can also be used in this project. However, the model monitoring aspect is not used in this project, which can be considered for future use.
 
-**Project Architecture Summary**
+## Project Architecture Summary
 ---
 The following diagram below summarizes the structure for this project:
 
@@ -54,7 +69,7 @@ The following diagram below summarizes the structure for this project:
 
 Note that all steps mentioned above have been logged accordingly for future reference and easy maintenance, which are stored in <b>Training_Logs</b> and <b>Prediction_Logs</b> folders. Any bad quality data identified for model training and model prediction will be archived accordingly in <b>Archive_Training_Data</b> and <b>Archive_Prediction_Data</b> folders.
 
-**Project Folder Structure**
+## Project Folder Structure
 ---
 The following points below summarizes the use of every file/folder available for this project:
 1. Application_Logger: Helper module for logging model training and prediction process
@@ -89,7 +104,7 @@ The following sections below explains the three main approaches that can be used
 2. <b>Docker</b>
 3. <b>Cloud Platform (Heroku with Docker)</b>
 
-**Project Instructions (Local Environment)**
+## Project Instructions (Local Environment)
 ---  
 If you prefer to deploy this project on your local machine system, the steps for deploying this project has been simplified down to the following:
 
@@ -140,7 +155,7 @@ streamlit run main.py
 10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
 <img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
-**Project Instructions (Docker)**
+## Project Instructions (Docker)
 ---
 
 <img src="https://user-images.githubusercontent.com/34255556/195037066-21347c07-217e-4ecd-9fef-4e7f8cf3e098.png" width="600">
@@ -218,7 +233,7 @@ Browser for the application can be opened from Docker Desktop by clicking on the
 docker cp <container-id>:<source-dir> <destination-dir>
 ```
 
-**Project Instructions (Heroku)**
+## Project Instructions (Heroku with Docker)
 ---
 <img src = "https://user-images.githubusercontent.com/34255556/195037620-2a26dbfc-289c-44ff-bd65-8a1fc9307ef3.png" width="600">
 
@@ -273,7 +288,7 @@ For replicating the steps required for running this project on your own Heroku a
 
 <b>Important Note: Using "free" dynos on Heroku app only allows the app to run for a maximum of 30 minutes. Since the model training and prediction process takes a long time, consider changing the dynos type to "hobby" for unlimited time, which cost about $7 per month per dyno. You may also consider changing the dynos type to Standard 1X/2X for enhanced app performance.</b>
 
-**Initial Data Cleaning/Feature Engineering**
+## Initial Data Cleaning and Feature Engineering
 ---
 After performing Exploratory Data Analysis, the following steps are performed initially on the entire dataset before performing further data preprocessing and model training:
 
@@ -298,7 +313,7 @@ In addition, the following pickle files (with self-explanatory names) have been 
 - <b>Dropconstantfeatures.pkl</b>
 - <b>ZeroIndicator.pkl</b>
 
-**Model Training Setting**
+## Model Training Setting
 ---
 For this project, nested cross validation with stratification is used for identifying the best model class to use for model deployment. The inner loop of nested cross validation consists of 3 fold cross validation using Optuna (TPE Multivariate Sampler with 20 trials on optimizing average F1 score) for hyperparameter tuning on different training and validation sets, while the outer loop of nested cross validation consists of 5 fold cross validation for model evaluation on different test sets.
 
@@ -329,7 +344,7 @@ For model evaluation on binary classification, the following metrics are used in
 - Matthew's correlation coefficient
 - Average precision score
 
-**Machine Pipelines Configuration**
+## Machine Pipelines Configuration
 ---
 While data preprocessing steps can be done on the entire dataset before model training, it is highly recommended to perform all data preprocessing steps within cross validation using pipelines to reduce the risk of data leakage, where information from training data is leaked to validation/test data.
 
@@ -413,10 +428,10 @@ After selecting the best features from feature selection, an additional step tha
 
 - No single clustering approach (K-means vs Hierarchical vs DBScan vs Affinity Propagation) provide significantly better results in model performance. Thus, affinity propagation method is used for this project, which automatically determines the number of clusters to use. However, "damping" parameter requires hyperparameter tuning for using Affinity Propagation method.
 
-**Project Findings**
+## Project Findings
 ---
 
-### 1. EDA (Exploratory Data Analysis)
+#### 1. EDA (Exploratory Data Analysis)
 
 All plots generated from this section can be found in Intermediate_Train_Results/EDA folder.
 
@@ -463,7 +478,7 @@ The set of figures below shows an example of the following plots mentioned above
 </p>
 
 ---
-### 2. Best classification model and pipeline configuration
+#### 2. Best classification model and pipeline configuration
 
 The following information below summarizes the configuration of the best model identified in this project:
 
@@ -512,7 +527,7 @@ In addition, the following artifacts are also created for the best model class i
 - Discrimination threshold plot (.png format)
 
 ---
-### 3. Summary of model evaluation metrics from best classification model
+#### 3. Summary of model evaluation metrics from best classification model
 
 The following information below summarizes the evaluation metrics *(average (standard deviation)) from the best model identified in this project along with the confusion matrix from nested cross validation (5 outer fold with 3 inner fold): 
 
@@ -548,21 +563,21 @@ The following information below summarizes the evaluation metrics *(average (sta
 Note that the results above may differ by changing search space of hyperparameter tuning or increasing number of trials used in hyperparameter tuning or changing number of folds within nested cross validation
 
 ---
-### 4. Hyperparameter importances from Optuna (Final model)
+#### 4. Hyperparameter importances from Optuna (Final model)
 
 ![HP_Importances_LinearSVC_Fold_overall](https://user-images.githubusercontent.com/34255556/194896701-0a6f16e5-6541-47ee-bf7e-d9a8e4d59833.png)
 
 From the image above, determining the method for handling imbalanced data as part of preprocessing pipeline for Linear SVC model provides the highest influence (0.35), followed by selecting hyperparameter value of "C", feature selection and feature scaling method. Setting hyperparameter value of class weight and penalty for Linear SVC model provides little to zero influence on results of hyperparameter tuning. This may suggest that both class weight and penalty hyperparameters of Linear SVC model can be excluded from hyperparameter tuning in the future during model retraining to reduce complexity of hyperparameter tuning process.
 
 ---
-### 5. Hyperparameter tuning optimization history from Optuna
+#### 5. Hyperparameter tuning optimization history from Optuna
 
 ![Optimization_History_LinearSVC_Fold_overall](https://user-images.githubusercontent.com/34255556/194896645-c5402dae-0612-4c56-a91c-b2dd83c3896a.png)
 
 From the image above, the best objective value (average of F1 scores from 3 fold cross validation) is identified at the end of the Optuna study (approximately 0.17). This may suggest that the number of Optuna trials can be increased further (more than 20 trials) within a reasonable budget, which better sets of hyperparameters may be identified towards later Optuna study trials.
 
 ---
-### 6. Overall confusion matrix and classification report from final model trained
+#### 6. Overall confusion matrix and classification report from final model trained
 
 <p float="left">
 <img src="https://user-images.githubusercontent.com/34255556/194896442-59b34588-d2c5-4dd6-90c7-9140979d756d.png" width="400">
@@ -572,7 +587,7 @@ From the image above, the best objective value (average of F1 scores from 3 fold
 From the image above, the classification model performs better for status of wafers in bad condition (1) with less false negatives (25 samples), as compared to false positives (51 samples). Given that the model evaluation criteria emphasize the costly impact of having both false positives and false negatives equally, the current classification model is optimized to improve F1 score.
 
 ---
-### 7. Discrimination Threshold for binary classification
+#### 7. Discrimination Threshold for binary classification
 
 ![Binary_Threshold_LinearSVC](https://user-images.githubusercontent.com/34255556/194896328-35ff3021-3ee5-4e3c-a947-46d13c39a57b.png)
 
@@ -584,7 +599,7 @@ best_threshold = visualizer.thresholds_[visualizer.cv_scores_[visualizer.argmax]
 ```
 
 ---
-### 8. Learning Curve Analysis
+#### 8. Learning Curve Analysis
 
 ![LearningCurve_LinearSVC](https://user-images.githubusercontent.com/34255556/194896233-1f1e2e4c-d176-40e4-9c72-1dad15791bef.png)
 
@@ -592,7 +607,7 @@ From the diagram above, the gap between train and test F1 scores (from 5-fold cr
 Since the gap between both scores are very narrow, this indicates that adding more training data may not help to improve generalization of model.
 
 ---
-### 9. Feature Importance based on Shap Values
+#### 9. Feature Importance based on Shap Values
 
 <p float="left">
 <img src="https://user-images.githubusercontent.com/34255556/194895936-b0057e51-46e5-4ffa-bcfe-28c2fdd009a0.png" width="400">
@@ -603,6 +618,6 @@ From both diagrams above, zero value indicator of Sensor 95 is the most influent
 
 From observing Shap's summary plot (right figure), most continuous features with higher values have higher probability of wafer identified as faulty with the exception of Sensor112, Sensor101 and Sensor419 where lower values indicate higher probability of having a faulty wafer. In addition, most binary categorical features with zero value indicate higher probability of wafer identified as faulty, except for Sensor95, Sensor419 and Sensor500 with zero value indicator and Sensor113 with missing value indicator being the opposite scenario.
 
-**Legality**
+## Legality
 ---
 This is a personal project made for non-commercial uses ONLY. This project will not be used to generate any promotional or monetary value for me, the creator, or the user.
