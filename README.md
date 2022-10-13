@@ -1,20 +1,5 @@
 # Wafer Status Classification Project
 
-## Contents
-- [Background](#background)
-- [Code and Resources Used](#code-and-resources-used)
-- [CRISP-DM Methodology](#crisp-dm-methodology)
-- [Project Architecture Summary](#project-architecture-summary)
-- [Project Folder Structure](#project-folder-structure)
-- [Project Instructions (Local Environment)](#project-instructions-local-environment)
-- [Project Instructions (Docker)](#project-instructions-docker)
-- [Project Instructions (Heroku with Docker)](#project-instructions-heroku-with-docker)
-- [Initial Data Cleaning and Feature Engineering](#initial-data-cleaning-and-feature-engineering)
-- [Model Training Setting](#model-training-setting)
-- [Machine Pipelines Configuration](#machine-pipelines-configuration)
-- [Project Findings](#project-findings)
-- [Legality](#legality)
-
 ## Background
 ---
 
@@ -28,10 +13,40 @@ Dataset is provided in .csv format by client under <b>Training_Batch_Files</b> f
 
 In addition, schema of datasets for training and prediction is provided in .json format by the client for storing seperate csv files into a single MySQL database.
 
+## Contents
+- [Code and Resources Used](#code-and-resources-used)
+- [Model Training Setting](#model-training-setting)
+- [Project Findings](#project-findings)
+  - [EDA](#1-eda-exploratory-data-analysis)
+  - [Best classification model and pipeline configuration](#2-best-classification-model-and-pipeline-configuration)
+  - [Summary of model evaluation metrics from best classification model](#3-summary-of-model-evaluation-metrics-from-best-classification-model)
+  - [Hyperparameter importances from Optuna (Final model)](#4-hyperparameter-importances-from-optuna-final-model)
+  - [Hyperparameter tuning optimization history from Optuna](#5-hyperparameter-tuning-optimization-history-from-optuna)
+  - [Overall confusion matrix and classification report from final model trained](#6-overall-confusion-matrix-and-classification-report-from-final-model-trained)
+  - [Discrimination Threshold for binary classification](#7-discrimination-threshold-for-binary-classification)
+  - [Learning Curve Analysis](#8-learning-curve-analysis)
+  - [Feature Importance based on Shap Values](#9-feature-importance-based-on-shap-values)
+- [CRISP-DM Methodology](#crisp-dm-methodology)
+- [Project Architecture Summary](#project-architecture-summary)
+- [Project Folder Structure](#project-folder-structure)
+- [Project Instructions (Local Environment)](#project-instructions-local-environment)
+- [Project Instructions (Docker)](#project-instructions-docker)
+- [Project Instructions (Heroku with Docker)](#project-instructions-heroku-with-docker)
+- [Initial Data Cleaning and Feature Engineering](#initial-data-cleaning-and-feature-engineering)
+- [Machine Pipelines Configuration](#machine-pipelines-configuration)
+  - [Handling missing values](#i-handling-missing-values)
+  - [Handling imbalanced data](#ii-handling-imbalanced-data)
+  - [Handling outliers by capping at extreme values](#iii-handling-outliers-by-capping-at-extreme-values)
+  - [Gaussian transformation on non-gaussian variables](#iv-gaussian-transformation-on-non-gaussian-variables)
+  - [Feature Scaling](#v-feature-scaling)
+  - [Feature Selection](#vi-feature-selection)
+  - [Cluster Feature representation](#vii-cluster-feature-representation)
+- [Legality](#legality)
+
 ## Code and Resources Used
 ---
 - **Python Version** : 3.10.0
-- **Packages** : borutashap, feature-engine, featurewiz, imbalanced-learn, joblib, catboost, lightgbm, matplotlib, mysql-connector-python, numpy, optuna, pandas, plotly, scikit-learn, scipy, seaborn, shap, tqdm, xgboost, yellowbrick
+- **Packages** : borutashap, feature-engine, featurewiz, imbalanced-learn, joblib, catboost, lightgbm, matplotlib, mysql-connector-python, numpy, optuna, pandas, plotly, scikit-learn, scipy, seaborn, shap, streamlit, tqdm, xgboost, yellowbrick
 - **Dataset source** : Education materials from OneNeuron platform
 - **Database**: MySQL
 - **MySQL documentation**: https://dev.mysql.com/doc/
@@ -50,268 +65,7 @@ In addition, schema of datasets for training and prediction is provided in .json
 - **Seaborn documentation**: https://seaborn.pydata.org/
 - **Yellowbrick documentation**: https://www.scikit-yb.org/en/latest/
 - **Scipy documentation**: https://docs.scipy.org/doc/scipy/
-
-
-## CRISP-DM Methodology
----
-For any given Machine Learning projects, CRISP-DM (Cross Industry Standard Practice for Data Mining) methodology is the most commonly adapted methodology used.
-The following diagram below represents a simple summary of the CRISP-DM methodology for this project:
-
-<img src="https://www.datascience-pm.com/wp-content/uploads/2018/09/crisp-dm-wikicommons.jpg" width="450" height="400">
-
-Note that an alternative version of this methodology, known as CRISP-ML(Q) (Cross Industry Standard Practice for Machine Learning and Quality Assurance) can also be used in this project. However, the model monitoring aspect is not used in this project, which can be considered for future use.
-
-## Project Architecture Summary
----
-The following diagram below summarizes the structure for this project:
-
-![image](https://user-images.githubusercontent.com/34255556/164873790-34d8826f-2acc-43c9-9d7c-6aafd2e2b355.png)
-
-Note that all steps mentioned above have been logged accordingly for future reference and easy maintenance, which are stored in <b>Training_Logs</b> and <b>Prediction_Logs</b> folders. Any bad quality data identified for model training and model prediction will be archived accordingly in <b>Archive_Training_Data</b> and <b>Archive_Prediction_Data</b> folders.
-
-## Project Folder Structure
----
-The following points below summarizes the use of every file/folder available for this project:
-1. Application_Logger: Helper module for logging model training and prediction process
-2. Archive_Prediction_Data: Stores bad quality prediction csv files that have been used previously for model prediction
-3. Archive_Training_Data: Stores bad quality training csv files that have been used previously for model training
-4. Bad_Prediction_Data: Temporary folder for identifying bad quality prediction csv files
-5. Bad_Training_Data: Temporary folder for identifying bad quality prediction csv files
-6. Good_Prediction_Data: Temporary folder for identifying good quality prediction csv files
-7. Good_Training_Data: Temporary folder for identifying good quality training csv files
-8. Intermediate_Pred_Results: Stores results from model prediction
-9. Intermediate_Train_Results: Stores additional information from model training process
-10. Model_Prediction_Modules: Helper modules for model prediction
-11. Model_Training_Modules: Helper modules for model training
-12. Prediction_Batch_Files: Stores csv batch files to be used for model prediction
-13. Prediction_Data_FromDB: Stores compiled data from SQL database for model prediction
-14. Prediction_Logs: Stores logging information from model prediction for future debugging and maintenance
-15. Saved_Models: Stores best models identified from model training process for model prediction
-16. Training_Batch_Files: Stores csv batch files to be used for model training
-17. Training_Data_FromDB: Stores compiled data from SQL database for model training
-18. Training_Logs: Stores logging information from model training for future debugging and maintenance
-19. Dockerfile: Additional file for Docker model deployment
-20. main.py: Main file for program execution
-21. Procfile: Additional file for Heroku model deployment
-22. README.md: Details summary of project for presentation
-23. requirements.txt: List of Python packages to install for model deployment
-24. schema_prediction.json: JSON file that contains database schema for model prediction
-25. schema_training.json: JSON file that contains database schema for model training
-26. setup.sh : Additional file for Heroku model deployment
-
-The following sections below explains the three main approaches that can be used for model deployment in this project:
-1. <b>Local environment</b>
-2. <b>Docker</b>
-3. <b>Cloud Platform (Heroku with Docker)</b>
-
-## Project Instructions (Local Environment)
----  
-If you prefer to deploy this project on your local machine system, the steps for deploying this project has been simplified down to the following:
-
-1. Download and extract the zip file from this github repository into your local machine system.
-<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
-
-2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
-
-3. Open MySQL in your local machine system and create a new database name of your choice with the following syntax: 
-```
-CREATE DATABASE db_name;
-```
-- Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
-  
-4. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
-```
-logins = {"host": <host_name>, 
-          "user": <user_name>, 
-          "password": <password>, 
-          "dbname": <new_local_database_name>} 
-```
-- For security reasons, this file needs to be stored in private. (Default host is localhost and user is root for MySQL)
-  
-5. Open anaconda prompt and create a new environment with the following syntax: 
-```
-conda create -n myenv python=3.10
-```
-- Note that you will need to install anaconda if not available in your local system: https://www.anaconda.com/
-
-6. After creating a new anaconda environment, activate the environment using the following command: 
-```
-conda activate myenv
-```
-
-7. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
-```
-pip install -r requirements.txt
-```
-
-8. After installing all the required Python libraries, run the following command on your project directory: 
-```
-streamlit run main.py
-```
-
-9. A new browser will open after successfully running the streamlit app with the following interface::
-<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
-
-10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
-<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
-
-## Project Instructions (Docker)
----
-
-<img src="https://user-images.githubusercontent.com/34255556/195037066-21347c07-217e-4ecd-9fef-4e7f8cf3e098.png" width="600">
-
-A suitable alternative for deploying this project is to use Docker, which allows easy deployment on other running instances. 
-  
-<b>Note that docker image is created under Windows Operating system for this project, therefore these instructions will only work on other windows instances.</b>
-
-<b> For deploying this project onto Docker, the following additional files are essential</b>:
-- DockerFile
-- requirements.txt
-- setup.py
-
-Docker Desktop needs to be installed into your local system, before proceeding with the following steps:
-
-1. Download and extract the zip file from this github repository into your local machine system.
-<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
-
-2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
-
-3. Create the following volumes (mysql and mysql configuration) and network in Docker for connecting between database container and application container using the following syntax:
-```
-docker volume create mysql
-docker volume create mysql_config
-docker network create mysqlnet
-```
-- Note that the naming conventions for both volumes and network can be changed.
-
-4. Run the following docker volumes and network for creating a new MySQL container in Docker:
-```
-docker run --rm -d -v mysql:/var/lib/mysql -v mysql_config:/etc/mysql -p 3307:3306 --network mysqlnet --name mysqldb -e MYSQL_ROOT_PASSWORD=custom_password mysql
-```
-Note that mysqldb refers to the name of the container, which will also be host name of database.
-
-5. For checking if the MySQL container has been created successfully, the following command can be executed on a separate command prompt, which will prompt the user to enter root password defined in previous step:
-```
-docker exec -ti mysqldb mysql -u root -p
-```
-  
-6. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
-```
-logins = {"host": <host_name>, 
-          "user": <user_name>, 
-          "password": <password>, 
-          "dbname": <default_database_name>} 
-```
-- For security reasons, this file needs to be stored in private. (Default host is container name defined in step 4 and user is root for MySQL)
-
-7. Create a file named Dockerfile with the following commands:
-<img src="https://user-images.githubusercontent.com/34255556/195380388-ec1260b0-2228-41f4-9ec7-452e35dae65f.png">
-- Note that any future changes in the Dockerfile or other files within the folder requires creating a new docker image.
-
-8. Build a new docker image on the project directory with the following command:
-```
-docker build -t api-name .
-```
-
-9. Run the docker image on the project directory with the following command: 
-```
-docker run --network mysqlnet -e PORT=8501 -p 8501:8501 api-name
-```
-Note that the command above creates a new docker app container with the given image "api-name". Adding network onto the docker app container will allow connection between two separate docker containers.
-
-10. A new browser will open after successfully running the streamlit app with the following interface:
-<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
-
-Browser for the application can be opened from Docker Desktop by clicking on the specific button shown below:
-![image](https://user-images.githubusercontent.com/34255556/195381876-b3377125-a9c1-46c0-aa4f-9734c430638d.png)
-
-11. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
-<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
-
-12. After running all steps of the pipeline, run the following command to extract files from a specific directory within the docker container to host machine for viewing:
-```
-docker cp <container-id>:<source-dir> <destination-dir>
-```
-
-## Project Instructions (Heroku with Docker)
----
-<img src = "https://user-images.githubusercontent.com/34255556/195037620-2a26dbfc-289c-44ff-bd65-8a1fc9307ef3.png" width="600">
-
-<b> For deploying models onto Heroku platform, the following additional files are essential</b>:
-- Procfile
-- requirements.txt
-- setup.sh
-
-<b>Note that deploying models onto other cloud platforms like GCP, AWS or Azure may have different additionnal files required.</b>
-
-For replicating the steps required for running this project on your own Heroku account, the following steps are required:
-1. Clone this github repository into your local machine system or your own Github account if available.
-<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
-
-2. Delete files stored inside Training_Logs and Prediction_Logs folder, while creating a dummy.txt file inside both folders respectively. This is to ensure both directories exist when the model is deployed into Heroku.
-<img src="https://user-images.githubusercontent.com/34255556/160224012-4f861309-1e7a-40ad-b466-dbdc8e22f20e.png" width="600" height="80">
-
-3. Go to your own Heroku account and create a new app with your own customized name.
-<img src="https://user-images.githubusercontent.com/34255556/160223589-301262f6-6225-4962-a92f-fc7ca8a0eee9.png" width="600" height="400">
-
-4. Go to "Resources" tab and search for ClearDB MySQL in the add-ons search bar.
-<img src="https://user-images.githubusercontent.com/34255556/160224064-35295bf6-3170-447a-8eae-47c6721cf8f0.png" width="600" height="200">
-
-5. Select the ClearDB MySQL add-on and select the relevant pricing plan. (Note that I select Punch plan, which currently cost about $9.99 per month to increase storage capacity for this project.)
-
-6. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
-```
-  logins = {"host": <host_name>, 
-            "user": <user_name>, 
-            "password": <password>, 
-            "dbname": <default_Heroku_database_name>}
-```
-- For security reasons, this file needs to be stored in private. I've also included a video reference link below for clear instructions on setup ClearDB MySQL for Heroku.
-  
-[![Deploy MySQL Database into Heroku](https://i.ytimg.com/vi/Zcg71lxW-Yo/hqdefault.jpg)](https://www.youtube.com/watch?v=Zcg71lxW-Yo&ab_channel=CodeJava)
-
-7. Inside your new app, deploy the code into the app by either linking your github repository or manually deploy it using Heroku CLI (Instructions are available and self-explanatory when selecting Heroku CLI option).
-<img src="https://user-images.githubusercontent.com/34255556/160223941-2aacc3ca-4ab5-4996-be46-f2d553933dd5.png" width="600" height="300">
-
-8. After successful model deployment, open the app and you will see the following interface designed using Streamlit:
-<img src="https://user-images.githubusercontent.com/34255556/174513887-d2614ff2-a1d4-4ed5-886a-4ea44045bcc1.png" width="600" height="300">
-
-9. After installing all the required Python libraries, run the following command on your project directory: <b>streamlit run main.py</b>
-
-9. A new browser will open after successfully running the streamlit app with the following interface::
-
-<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
-
-10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
-
-<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
-
-<b>Important Note: Using "free" dynos on Heroku app only allows the app to run for a maximum of 30 minutes. Since the model training and prediction process takes a long time, consider changing the dynos type to "hobby" for unlimited time, which cost about $7 per month per dyno. You may also consider changing the dynos type to Standard 1X/2X for enhanced app performance.</b>
-
-## Initial Data Cleaning and Feature Engineering
----
-After performing Exploratory Data Analysis, the following steps are performed initially on the entire dataset before performing further data preprocessing and model training:
-
-i) Removing "Wafer" column, which is an ID representation of a given row
-
-ii) Checking for duplicated rows and remove if exist
-
-iii) Split dataset into features and target labels with values of -1 replaced as 0 (non-faulty).
-
-iv) Adding missing indicator (binary value) for all continuous features
-
-v) Adding zero value indicator (binary value) for all continuous features with more than 1% having zero values
-
-vi) Remove all features that have low variance (less than 2%)
-
-vii) Save reduced set of features and target values into 2 different CSV files (X.csv and y.csv) for further data preprocessing with pipelines to reduce data leakage.
-
-For more details of which features have been initially removed from the dataset, refer to the following CSV file: <b>Columns_Drop_from_Original.csv</b>
-
-In addition, the following pickle files (with self-explanatory names) have been created inside Intermediate_Train_Results folder during this stage which will be used later on during data preprocessing on test data batch:
-- <b>AddMissingIndicator.pkl</b>
-- <b>Dropconstantfeatures.pkl</b>
-- <b>ZeroIndicator.pkl</b>
+- **Streamlit documentation**: https://docs.streamlit.io/
 
 ## Model Training Setting
 ---
@@ -343,90 +97,6 @@ For model evaluation on binary classification, the following metrics are used in
 - F1 score (Main metric for Optuna hyperparameter tuning)
 - Matthew's correlation coefficient
 - Average precision score
-
-## Machine Pipelines Configuration
----
-While data preprocessing steps can be done on the entire dataset before model training, it is highly recommended to perform all data preprocessing steps within cross validation using pipelines to reduce the risk of data leakage, where information from training data is leaked to validation/test data.
-
-The sections below summarizes the details of Machine Learning pipelines with various variations in steps:
-
-#### i. Handling missing values
-Most machine learning models do not automatically handle missing values (with the exception of XGBoost, LightGBM and CatBoost). Therefore, missing values need appropriate handling first before subsequent steps of the pipeline can be executed.
-
-For this project, missing values are handled using the following methods:
-
-- Simple Mean Imputation: For gaussian features that have data missing completely at random (MCAR)
-- Simple Median Imputation: For non gaussian features that have data missing completely at random (MCAR)
-- End Tail Mean Imputation: For gaussian features that have data missing at random (MAR)
-- End Tail Median Imputation: For non gaussian features that have data missing at random (MAR)
-
-Note that skewness of features is used to distinguish between gaussian and non-gaussian features. On the other hand, number of features with low spearman correlation (between -0.4 and 0.4) of missingness with other features is used to distinguish between MCAR (All features) and MAR (Not all features).
-
-For XGBoost, LightGBM and CatBoost, the presence of this pipeline step is also tested as part of hyperparameter tuning within nested cross validation.
-
-#### ii. Handling imbalanced data
-While most machine learning models have hyperparameters that allow adjustment of <b>class weights</b> for classification, an alternative solution to handle imbalanced data is to use oversampling or undersampling or combination of both oversampling and undersampling methods.
-
-For this project, the following methods of handling imbalanced data are tested:
-
-- SMOTETomek: Combine over (SMOTEENC) and under sampling using SMOTE and Tomek links.
-- SMOTEENN: Combine over (SMOTEENC) and under sampling using SMOTE and Edited Nearest Neighbours.
-- SMOTEENC: Synthetic Minority Over-sampling Technique for Nominal and Continuous data.
-- No oversampling or undersampling required
-
-For XGBoost, LightGBM and CatBoost, if handling missing values are not included as part of the pipeline, this step of the pipeline will be discarded.
-
-#### iii. Handling outliers by capping at extreme values
-Machine learning models like Logistic Regression, Linear SVC and KNN are highly sensitive to outliers, which may impact model performance. For those 3 types of models, the presence of this step of the pipeline by capping outliers at extreme ends of gaussian/non-gaussian distribution will be tested accordingly using Winsorizer function from feature-engine library.
-
-Note that Anderson test is used to identify gaussian vs non-gaussian distribution in this pipeline step.
-
-#### iv. Gaussian transformation on non-gaussian variables
-In Machine Learning, several machine learning models like Logistic Regression and Gaussian Naive Bayes tends to perform best when data follows the assumption of normal distribution. The following types of gaussian transformation are tested on non-gaussian features and the gaussian transformation that works best on given feature (the lowest test statistic that is smaller than 5% critical value) will be used for gaussian transformation: 
-
-- Logarithmic
-- Reciprocal
-- Square Root
-- Yeo Johnson
-- Square
-- Quantile (Normal distribution)
-
-Note that Anderson test is used to identify whether a given gaussian transformation technique successfully converts a non-gaussian feature to a gaussian feature.
-
-#### v. Feature Scaling
-Feature scaling is only essential in some machine learning models like Logistic Regression, Linear SVC and KNN for faster convergence and to prevent misinterpretation of one feature significantly more important than other features.
-
-For this project, the following methods of feature scaling are tested:
-
-- Standard Scaler
-- MinMax Scaler
-- Robust Scaler
-- Standard Scaler for gaussian features + MinMax Scaler for non-gaussian features
-
-#### vi. Feature Selection
-Given the current dataset has very large number of features, performing feature selection is essential for simplifying the machine learning model, reducing model training time and to reduce risk of model overfitting.
-
-For this project, the presence of removing highly correlated variables (>0.8) based on spearman correlation is tested (except for FeatureWiz method) along with the following methods of feature selection with pipelines that handle missing values:
-
-- Mutual Information
-- ANOVA
-- Feature Importance using Extra Trees Classifier
-- Logistic Regression with Lasso Penalty (l1)
-- BorutaShap (Default base learner: Random Forest Classifier)
-- FeatureWiz (SULOV (Searching for Uncorrelated List of Variables) + Recursive Feature Elimination with XGBoost Classifier)
-
-For pipelines (XGBoost, LightGBM and CatBoost) that do not involve handling missing values, only feature selection method tested is based on feature importance for respective base learners.
-
-#### vii. Cluster Feature representation
-After selecting the best features from feature selection, an additional step that can be tested involves representing distance between various points and identified cluster point as a feature (cluster_distance) for model training. From the following research paper (https://link.springer.com/content/pdf/10.1007/s10115-021-01572-6.pdf) written by Maciej Piernik and Tadeusz Morzy in 2021, both authors concluded the following points that will be applied to this project:
-
--  Adding cluster-generated features may improve quality of classification models (linear classifiers like Logistic Regression and Linear SVC), with extra caution required for non-linear classifiers like K Neighbors Classifier and random forest approaches.
-
-- Encoding clusters as features based on distances between points and cluster representatives with feature scaling is significantly better than solely relying on cluster membership with One Hot encoding. 
-
-- Adding generated cluster features to existing ones is safer option than replacing them altogether, which may yield model improvements without degrading model quality
-
-- No single clustering approach (K-means vs Hierarchical vs DBScan vs Affinity Propagation) provide significantly better results in model performance. Thus, affinity propagation method is used for this project, which automatically determines the number of clusters to use. However, "damping" parameter requires hyperparameter tuning for using Affinity Propagation method.
 
 ## Project Findings
 ---
@@ -617,6 +287,361 @@ Since the gap between both scores are very narrow, this indicates that adding mo
 From both diagrams above, zero value indicator of Sensor 95 is the most influential variable, while missing value indicator of Sensor 110 is the least influential variable from the top 21 variables identified from feature selection using ANOVA.
 
 From observing Shap's summary plot (right figure), most continuous features with higher values have higher probability of wafer identified as faulty with the exception of Sensor112, Sensor101 and Sensor419 where lower values indicate higher probability of having a faulty wafer. In addition, most binary categorical features with zero value indicate higher probability of wafer identified as faulty, except for Sensor95, Sensor419 and Sensor500 with zero value indicator and Sensor113 with missing value indicator being the opposite scenario.
+
+## CRISP-DM Methodology
+---
+For any given Machine Learning projects, CRISP-DM (Cross Industry Standard Practice for Data Mining) methodology is the most commonly adapted methodology used.
+The following diagram below represents a simple summary of the CRISP-DM methodology for this project:
+
+<img src="https://www.datascience-pm.com/wp-content/uploads/2018/09/crisp-dm-wikicommons.jpg" width="450" height="400">
+
+Note that an alternative version of this methodology, known as CRISP-ML(Q) (Cross Industry Standard Practice for Machine Learning and Quality Assurance) can also be used in this project. However, the model monitoring aspect is not used in this project, which can be considered for future use.
+
+## Project Architecture Summary
+---
+The following diagram below summarizes the structure for this project:
+
+![image](https://user-images.githubusercontent.com/34255556/164873790-34d8826f-2acc-43c9-9d7c-6aafd2e2b355.png)
+
+Note that all steps mentioned above have been logged accordingly for future reference and easy maintenance, which are stored in <b>Training_Logs</b> and <b>Prediction_Logs</b> folders. Any bad quality data identified for model training and model prediction will be archived accordingly in <b>Archive_Training_Data</b> and <b>Archive_Prediction_Data</b> folders.
+
+## Project Folder Structure
+---
+The following points below summarizes the use of every file/folder available for this project:
+1. Application_Logger: Helper module for logging model training and prediction process
+2. Archive_Prediction_Data: Stores bad quality prediction csv files that have been used previously for model prediction
+3. Archive_Training_Data: Stores bad quality training csv files that have been used previously for model training
+4. Bad_Prediction_Data: Temporary folder for identifying bad quality prediction csv files
+5. Bad_Training_Data: Temporary folder for identifying bad quality prediction csv files
+6. Good_Prediction_Data: Temporary folder for identifying good quality prediction csv files
+7. Good_Training_Data: Temporary folder for identifying good quality training csv files
+8. Intermediate_Pred_Results: Stores results from model prediction
+9. Intermediate_Train_Results: Stores results from EDA, data preprocessing and model training process
+10. Model_Prediction_Modules: Helper modules for model prediction
+11. Model_Training_Modules: Helper modules for model training
+12. Prediction_Batch_Files: Stores csv batch files to be used for model prediction
+13. Prediction_Data_FromDB: Stores compiled data from SQL database for model prediction
+14. Prediction_Logs: Stores logging information from model prediction for future debugging and maintenance
+15. Saved_Models: Stores best models identified from model training process for model prediction
+16. Training_Batch_Files: Stores csv batch files to be used for model training
+17. Training_Data_FromDB: Stores compiled data from SQL database for model training
+18. Training_Logs: Stores logging information from model training for future debugging and maintenance
+19. Dockerfile: Additional file for Docker project deployment
+20. main.py: Main file for program execution
+21. README.md: Details summary of project for presentation
+22. requirements.txt: List of Python packages to install for project deployment
+23. setup.py : Script for installing relevant python packages for project deployment
+24. schema_prediction.json: JSON file that contains database schema for model prediction
+25. schema_training.json: JSON file that contains database schema for model training
+
+
+The following sections below explains the three main approaches that can be used for deployment in this project:
+1. <b>Docker</b>
+2. <b>Cloud Platform (Heroku with Docker)</b>
+3. <b>Local environment</b>
+
+## Project Instructions (Docker)
+---
+<img src="https://user-images.githubusercontent.com/34255556/195037066-21347c07-217e-4ecd-9fef-4e7f8cf3e098.png" width="600">
+
+Deploying this project on Docker allows for portability between different environments and running instances without relying on host operating system.
+  
+<b>Note that docker image is created under Windows Operating system for this project, therefore these instructions will only work on other windows instances.</b>
+
+<b> For deploying this project onto Docker, the following additional files are essential</b>:
+- DockerFile
+- requirements.txt
+- setup.py
+
+Docker Desktop needs to be installed into your local system (https://www.docker.com/products/docker-desktop/), before proceeding with the following steps:
+
+1. Download and extract the zip file from this github repository into your local machine system.
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
+
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
+
+3. Create the following volumes (mysql and mysql configuration) and network in Docker for connecting between database container and application container using the following syntax:
+```
+docker volume create mysql
+docker volume create mysql_config
+docker network create mysqlnet
+```
+- Note that the naming conventions for both volumes and network can be changed.
+
+4. Run the following docker volumes and network for creating a new MySQL container in Docker:
+```
+docker run --rm -d -v mysql:/var/lib/mysql -v mysql_config:/etc/mysql -p 3306:3306 --network mysqlnet --name mysqldb -e MYSQL_ROOT_PASSWORD=custom_password mysql
+```
+Note that mysqldb refers to the name of the container, which will also be host name of database.
+
+5. For checking if the MySQL container has been created successfully, the following command can be executed on a separate command prompt, which will prompt the user to enter root password defined in previous step:
+```
+docker exec -ti mysqldb mysql -u root -p
+```
+  
+6. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
+```
+logins = {"host": <host_name>, 
+          "user": <user_name>, 
+          "password": <password>, 
+          "dbname": <default_database_name>} 
+```
+- For security reasons, this file needs to be stored in private. (Default host is container name defined in step 4 and user is root for MySQL)
+
+7. Build a new docker image on the project directory with the following command:
+```
+docker build -t api-name .
+```
+
+8. Run the docker image on the project directory with the following command: 
+```
+docker run --network mysqlnet -e PORT=8501 -p 8501:8501 api-name
+```
+Note that the command above creates a new docker app container with the given image "api-name". Adding network onto the docker app container will allow connection between two separate docker containers.
+
+9. A new browser will open after successfully running the streamlit app with the following interface:
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
+
+Browser for the application can be opened from Docker Desktop by clicking on the specific button shown below:
+![image](https://user-images.githubusercontent.com/34255556/195381876-b3377125-a9c1-46c0-aa4f-9734c430638d.png)
+
+10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
+
+11. After running all steps of the pipeline, run the following command to extract files from a specific directory within the docker container to host machine for viewing:
+```
+docker cp <container-id>:<source-dir> <destination-dir>
+```
+
+## Project Instructions (Heroku with Docker)
+---
+<img src = "https://user-images.githubusercontent.com/34255556/195489080-3673ab77-833d-47f6-8151-0fed308b9eec.png" width="600">
+
+A suitable alternative for deploying this project is to use docker images with cloud platforms like Heroku. 
+
+<b> For deploying models onto Heroku platform, the following additional files are essential</b>:
+- DockerFile
+- requirements.txt
+- setup.py
+
+<b>Note that deploying this project onto other cloud platforms like GCP, AWS or Azure may have different additionnal files required.</b>
+
+For replicating the steps required for running this project on your own Heroku account, the following steps are required:
+1. Clone this github repository into your local machine system or your own Github account if available.
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
+
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
+
+3. Go to your own Heroku account and create a new app with your own customized name.
+<img src="https://user-images.githubusercontent.com/34255556/160223589-301262f6-6225-4962-a92f-fc7ca8a0eee9.png" width="600" height="400">
+
+4. Go to "Resources" tab and search for ClearDB MySQL in the add-ons search bar.
+<img src="https://user-images.githubusercontent.com/34255556/160224064-35295bf6-3170-447a-8eae-47c6721cf8f0.png" width="600" height="200">
+
+5. Select the ClearDB MySQL add-on and select the relevant pricing plan. (Note that I select Punch plan, which currently cost about $9.99 per month to increase storage capacity for this project.)
+
+6. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
+```
+  logins = {"host": <host_name>, 
+            "user": <user_name>, 
+            "password": <password>, 
+            "dbname": <default_Heroku_database_name>}
+```
+- For security reasons, this file needs to be stored in private.
+
+- Information related to host, user and dbname for ClearDB MySQL can be found in the settings tab under ConfigVars section as shown in the image below:
+
+![image](https://user-images.githubusercontent.com/34255556/195486639-e1c94433-54c9-43ca-a134-c7501e84111f.png)
+
+- <b>CLEARDB_DATABASE_URL has the following format: mysql://<user_name>:<pass_word>@<host_name>/<db_name>?reconnect=true</b>
+
+7. From a new command prompt window, login to Heroku account and Container Registry by running the following commands:
+```
+heroku login
+heroku container:login
+```
+Note that Docker needs to be installed on your local system before login to heroku's container registry.
+
+8. Using the Dockerfile, push the docker image onto Heroku's container registry using the following command:
+```
+heroku container:push web -a app-name
+```
+
+9. Release the newly pushed docker images to deploy app using the following command:
+```
+heroku container:release web -a app-name
+```
+
+10. After successfully deploying docker image onto Heroku, open the app from the Heroku platform and you will see the following interface designed using Streamlit:
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
+
+11. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
+
+<b>Important Note</b>: 
+- Using "free" dynos on Heroku app only allows the app to run for a maximum of 30 minutes. Since the model training and prediction process takes a long time, consider changing the dynos type to "hobby" for unlimited time, which cost about $7 per month per dyno. You may also consider changing the dynos type to Standard 1X/2X for enhanced app performance.
+
+- Unlike stand-alone Docker containers, Heroku uses an ephemeral hard drive, meaning that files stored locally from running apps on Heroku will not persist when apps are restarted (once every 24 hours). Any files stored on disk will not be visible from one-off dynos such as a heroku run bash instance or a scheduler task because these commands use new dynos. Best practice for having persistent object storage is to leverage a cloud file storage service such as Amazon’s S3 (not part of project scope but can be considered)
+
+## Project Instructions (Local Environment)
+---  
+If you prefer to deploy this project on your local machine system, the steps for deploying this project has been simplified down to the following:
+
+1. Download and extract the zip file from this github repository into your local machine system.
+<img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
+
+2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
+
+3. Open MySQL in your local machine system and create a new database name of your choice with the following syntax: 
+```
+CREATE DATABASE db_name;
+```
+- Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
+  
+4. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
+```
+logins = {"host": <host_name>, 
+          "user": <user_name>, 
+          "password": <password>, 
+          "dbname": <new_local_database_name>} 
+```
+- For security reasons, this file needs to be stored in private. (Default host is localhost and user is root for MySQL)
+  
+5. Open anaconda prompt and create a new environment with the following syntax: 
+```
+conda create -n myenv python=3.10
+```
+- Note that you will need to install anaconda if not available in your local system: https://www.anaconda.com/
+
+6. After creating a new anaconda environment, activate the environment using the following command: 
+```
+conda activate myenv
+```
+
+7. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
+```
+pip install -r requirements.txt
+```
+
+8. After installing all the required Python libraries, run the following command on your project directory: 
+```
+streamlit run main.py
+```
+
+9. A new browser will open after successfully running the streamlit app with the following interface::
+<img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
+
+10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+<img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
+
+## Initial Data Cleaning and Feature Engineering
+---
+After performing Exploratory Data Analysis, the following steps are performed initially on the entire dataset before performing further data preprocessing and model training:
+
+i) Removing "Wafer" column, which is an ID representation of a given row
+
+ii) Checking for duplicated rows and remove if exist
+
+iii) Split dataset into features and target labels with values of -1 replaced as 0 (non-faulty).
+
+iv) Adding missing indicator (binary value) for all continuous features
+
+v) Adding zero value indicator (binary value) for all continuous features with more than 1% having zero values
+
+vi) Remove all features that have low variance (less than 2%)
+
+vii) Save reduced set of features and target values into 2 different CSV files (X.csv and y.csv) for further data preprocessing with pipelines to reduce data leakage.
+
+For more details of which features have been initially removed from the dataset, refer to the following CSV file: <b>Columns_Drop_from_Original.csv</b>
+
+In addition, the following pickle files (with self-explanatory names) have been created inside Intermediate_Train_Results folder during this stage which will be used later on during data preprocessing on test data batch:
+- <b>AddMissingIndicator.pkl</b>
+- <b>Dropconstantfeatures.pkl</b>
+- <b>ZeroIndicator.pkl</b>
+
+## Machine Pipelines Configuration
+---
+While data preprocessing steps can be done on the entire dataset before model training, it is highly recommended to perform all data preprocessing steps within cross validation using pipelines to reduce the risk of data leakage, where information from training data is leaked to validation/test data.
+
+The sections below summarizes the details of Machine Learning pipelines with various variations in steps:
+
+#### i. Handling missing values
+Most machine learning models do not automatically handle missing values (with the exception of XGBoost, LightGBM and CatBoost). Therefore, missing values need appropriate handling first before subsequent steps of the pipeline can be executed.
+
+For this project, missing values are handled using the following methods:
+
+- Simple Mean Imputation: For gaussian features that have data missing completely at random (MCAR)
+- Simple Median Imputation: For non gaussian features that have data missing completely at random (MCAR)
+- End Tail Mean Imputation: For gaussian features that have data missing at random (MAR)
+- End Tail Median Imputation: For non gaussian features that have data missing at random (MAR)
+
+Note that skewness of features is used to distinguish between gaussian and non-gaussian features. On the other hand, number of features with low spearman correlation (between -0.4 and 0.4) of missingness with other features is used to distinguish between MCAR (All features) and MAR (Not all features).
+
+For XGBoost, LightGBM and CatBoost, the presence of this pipeline step is also tested as part of hyperparameter tuning within nested cross validation.
+
+#### ii. Handling imbalanced data
+While most machine learning models have hyperparameters that allow adjustment of <b>class weights</b> for classification, an alternative solution to handle imbalanced data is to use oversampling or undersampling or combination of both oversampling and undersampling methods.
+
+For this project, the following methods of handling imbalanced data are tested:
+
+- SMOTETomek: Combine over (SMOTEENC) and under sampling using SMOTE and Tomek links.
+- SMOTEENN: Combine over (SMOTEENC) and under sampling using SMOTE and Edited Nearest Neighbours.
+- SMOTEENC: Synthetic Minority Over-sampling Technique for Nominal and Continuous data.
+- No oversampling or undersampling required
+
+For XGBoost, LightGBM and CatBoost, if handling missing values are not included as part of the pipeline, this step of the pipeline will be discarded.
+
+#### iii. Handling outliers by capping at extreme values
+Machine learning models like Logistic Regression, Linear SVC and KNN are highly sensitive to outliers, which may impact model performance. For those 3 types of models, the presence of this step of the pipeline by capping outliers at extreme ends of gaussian/non-gaussian distribution will be tested accordingly using Winsorizer function from feature-engine library.
+
+Note that Anderson test is used to identify gaussian vs non-gaussian distribution in this pipeline step.
+
+#### iv. Gaussian transformation on non-gaussian variables
+In Machine Learning, several machine learning models like Logistic Regression and Gaussian Naive Bayes tends to perform best when data follows the assumption of normal distribution. The following types of gaussian transformation are tested on non-gaussian features and the gaussian transformation that works best on given feature (the lowest test statistic that is smaller than 5% critical value) will be used for gaussian transformation: 
+
+- Logarithmic
+- Reciprocal
+- Square Root
+- Yeo Johnson
+- Square
+- Quantile (Normal distribution)
+
+Note that Anderson test is used to identify whether a given gaussian transformation technique successfully converts a non-gaussian feature to a gaussian feature.
+
+#### v. Feature Scaling
+Feature scaling is only essential in some machine learning models like Logistic Regression, Linear SVC and KNN for faster convergence and to prevent misinterpretation of one feature significantly more important than other features.
+
+For this project, the following methods of feature scaling are tested:
+
+- Standard Scaler
+- MinMax Scaler
+- Robust Scaler
+- Standard Scaler for gaussian features + MinMax Scaler for non-gaussian features
+
+#### vi. Feature Selection
+Given the current dataset has very large number of features, performing feature selection is essential for simplifying the machine learning model, reducing model training time and to reduce risk of model overfitting.
+
+For this project, the presence of removing highly correlated variables (>0.8) based on spearman correlation is tested (except for FeatureWiz method) along with the following methods of feature selection with pipelines that handle missing values:
+
+- Mutual Information
+- ANOVA
+- Feature Importance using Extra Trees Classifier
+- Logistic Regression with Lasso Penalty (l1)
+- BorutaShap (Default base learner: Random Forest Classifier)
+- FeatureWiz (SULOV (Searching for Uncorrelated List of Variables) + Recursive Feature Elimination with XGBoost Classifier)
+
+For pipelines (XGBoost, LightGBM and CatBoost) that do not involve handling missing values, only feature selection method tested is based on feature importance for respective base learners.
+
+#### vii. Cluster Feature representation
+After selecting the best features from feature selection, an additional step that can be tested involves representing distance between various points and identified cluster point as a feature (cluster_distance) for model training. From the following research paper (https://link.springer.com/content/pdf/10.1007/s10115-021-01572-6.pdf) written by Maciej Piernik and Tadeusz Morzy in 2021, both authors concluded the following points that will be applied to this project:
+
+-  Adding cluster-generated features may improve quality of classification models (linear classifiers like Logistic Regression and Linear SVC), with extra caution required for non-linear classifiers like K Neighbors Classifier and random forest approaches.
+
+- Encoding clusters as features based on distances between points and cluster representatives with feature scaling is significantly better than solely relying on cluster membership with One Hot encoding. 
+
+- Adding generated cluster features to existing ones is safer option than replacing them altogether, which may yield model improvements without degrading model quality
+
+- No single clustering approach (K-means vs Hierarchical vs DBScan vs Affinity Propagation) provide significantly better results in model performance. Thus, affinity propagation method is used for this project, which automatically determines the number of clusters to use. However, "damping" parameter requires hyperparameter tuning for using Affinity Propagation method.
 
 ## Legality
 ---
