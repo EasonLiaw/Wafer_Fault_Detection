@@ -333,6 +333,9 @@ The following points below summarizes the use of every file/folder available for
 23. setup.py : Script for installing relevant python packages for project deployment
 24. schema_prediction.json: JSON file that contains database schema for model prediction
 25. schema_training.json: JSON file that contains database schema for model training
+26. Docker_env: Folder that contains files that are required for project deployment without logging files or results.
+27. BorutaShap.py: Modified python script with some changes to coding for performing feature selection based on shap values on test set
+28. _tree.py: Modified python script to include AdaBoost Classifier as part of the set of models that support Shap library.
 
 
 The following sections below explains the three main approaches that can be used for deployment in this project:
@@ -523,15 +526,17 @@ conda activate myenv
 pip install -r requirements.txt
 ```
 
-8. After installing all the required Python libraries, run the following command on your project directory: 
+8. Overwrite both BorutaShap.py and _tree.py scripts in relevant directories (<b>env/env-name/lib/site-packages and env/env-name/lib/site-packages/shap/explainers</b>) where the original files are located.
+
+9. After installing all the required Python libraries, run the following command on your project directory: 
 ```
 streamlit run main.py
 ```
 
-9. A new browser will open after successfully running the streamlit app with the following interface::
+10. A new browser will open after successfully running the streamlit app with the following interface::
 <img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
 
-10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+11. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
 <img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
 ## Initial Data Cleaning and Feature Engineering
