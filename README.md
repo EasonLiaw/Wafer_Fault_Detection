@@ -301,7 +301,7 @@ Note that an alternative version of this methodology, known as CRISP-ML(Q) (Cros
 ---
 The following diagram below summarizes the structure for this project:
 
-![image](https://user-images.githubusercontent.com/34255556/164873790-34d8826f-2acc-43c9-9d7c-6aafd2e2b355.png)
+![image](https://user-images.githubusercontent.com/34255556/195505246-e18ab2c2-e34b-4145-8f21-1b52ff8823af.png)
 
 Note that all steps mentioned above have been logged accordingly for future reference and easy maintenance, which are stored in <b>Training_Logs</b> and <b>Prediction_Logs</b> folders. Any bad quality data identified for model training and model prediction will be archived accordingly in <b>Archive_Training_Data</b> and <b>Archive_Prediction_Data</b> folders.
 
