@@ -266,7 +266,7 @@ From the image above, the classification model performs better for status of waf
 
 ![Binary_Threshold_LinearSVC](https://user-images.githubusercontent.com/34255556/194896328-35ff3021-3ee5-4e3c-a947-46d13c39a57b.png)
 
-From the diagram above, performing 5 fold cross validation on the best model identified shows that the best threshold for optimizing F1 score is 0.13 (meaning that wafers with fault probability of 0.13 are identified as faulty). This threshold can be set when performing model predictions using the best model identified, however the current threshold used for model prediction in this project remains at default value of 0.5. Under the "Saved_Models" folder, a pickle file labeled "Binary_Threshold.pkl" can be used to extract the optimized threshold identified for model prediction with the following syntax below:
+From the diagram above, performing 5 fold cross validation on the best model identified shows that the best threshold for optimizing F1 score is 0.13 (meaning that wafers with fault probability of 0.13 or higher are identified as faulty). This threshold can be set when performing model predictions using the best model identified, however the current threshold used for model prediction in this project remains at default value of 0.5. Under the "Saved_Models" folder, a pickle file labeled "Binary_Threshold.pkl" can be used to extract the optimized threshold identified for model prediction with the following syntax below:
 
 ```
 visualizer = joblib.load('Saved_Models/Binary_Threshold.pkl')
@@ -499,14 +499,8 @@ If you prefer to deploy this project on your local machine system, the steps for
 <img src="https://user-images.githubusercontent.com/34255556/195367439-1dd10dd8-5e22-412e-8620-d4afb21176a0.png" width="600" height="200">
 
 2. Copy Docker_env folder into a separate directory, before proceeding with subsequent steps which will use Docker_env folder as root directory.
-
-3. Open MySQL in your local machine system and create a new database name of your choice with the following syntax: 
-```
-CREATE DATABASE db_name;
-```
-- Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
   
-4. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
+3. Add an additional Python file named as DBConnectionSetup.py that contains the following Python code structure: 
 ```
 logins = {"host": <host_name>, 
           "user": <user_name>, 
@@ -514,34 +508,37 @@ logins = {"host": <host_name>,
           "dbname": <new_local_database_name>} 
 ```
 - For security reasons, this file needs to be stored in private. (Default host is localhost and user is root for MySQL)
-  
-5. Open anaconda prompt and create a new environment with the following syntax: 
+- Note that you will need to install MySQL if not available in your local system: https://dev.mysql.com/downloads/windows/installer/8.0.html
+- Ensure that MySQL services is running on local system as shown in image below:
+![image](https://user-images.githubusercontent.com/34255556/195826091-f28233e3-9f45-46cd-b760-0a3108c9d570.png)
+
+4. Open anaconda prompt and create a new environment with the following syntax: 
 ```
 conda create -n myenv python=3.10
 ```
 - Note that you will need to install anaconda if not available in your local system: https://www.anaconda.com/
 
-6. After creating a new anaconda environment, activate the environment using the following command: 
+5. After creating a new anaconda environment, activate the environment using the following command: 
 ```
 conda activate myenv
 ```
 
-7. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
+6. Go to the local directory in Command Prompt where Docker_env folder is located and run the following command to install all the python libraries : 
 ```
 pip install -r requirements.txt
 ```
 
-8. Overwrite both BorutaShap.py and _tree.py scripts in relevant directories (<b>env/env-name/lib/site-packages and env/env-name/lib/site-packages/shap/explainers</b>) where the original files are located.
+7. Overwrite both BorutaShap.py and _tree.py scripts in relevant directories (<b>env/env-name/lib/site-packages and env/env-name/lib/site-packages/shap/explainers</b>) where the original files are located.
 
-9. After installing all the required Python libraries, run the following command on your project directory: 
+8. After installing all the required Python libraries, run the following command on your project directory: 
 ```
 streamlit run main.py
 ```
 
-10. A new browser will open after successfully running the streamlit app with the following interface::
+9. A new browser will open after successfully running the streamlit app with the following interface::
 <img src = "https://user-images.githubusercontent.com/34255556/195365035-d2f9bc6e-76b6-45e8-ba25-db1b02e5d7a3.png" width="600">
 
-11. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
+10. From the image above, click on Training Data Validation first for initializing data ingestion into MySQL, followed by subsequent steps from top to bottom in order to avoid potential errors with the model training/model prediction process. The image below shows an example of notification after the process is completed for Training Data Validation process:
 <img src = "https://user-images.githubusercontent.com/34255556/195366117-9c65a3b6-b405-4967-9236-907f3b012439.png" width="600">
 
 ## Initial Data Cleaning and Feature Engineering
@@ -602,7 +599,7 @@ For this project, the following methods of handling imbalanced data are tested:
 For XGBoost, LightGBM and CatBoost, if handling missing values are not included as part of the pipeline, this step of the pipeline will be discarded.
 
 #### iii. Handling outliers by capping at extreme values
-Machine learning models like Logistic Regression, Linear SVC and KNN are highly sensitive to outliers, which may impact model performance. For those 3 types of models, the presence of this step of the pipeline by capping outliers at extreme ends of gaussian/non-gaussian distribution will be tested accordingly using Winsorizer function from feature-engine library.
+Machine learning models like Logistic Regression, Linear SVC, KNN and Gaussian Naive Bayes are highly sensitive to outliers, which may impact model performance. For those 4 types of models, the presence of this step of the pipeline by capping outliers at extreme ends of gaussian/non-gaussian distribution will be tested accordingly using Winsorizer function from feature-engine library.
 
 Note that Anderson test is used to identify gaussian vs non-gaussian distribution in this pipeline step.
 
