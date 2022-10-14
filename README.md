@@ -196,6 +196,11 @@ In addition, the following artifacts are also created for the best model class i
 - Shap plots for feature importance (.png format - 2 in total)
 - Discrimination threshold plot (.png format)
 
+<b>Warning: The following artifacts mentioned above for the best model class identified will not be generated for certain model classes under the following scenarios:
+- Discrimination threshold plot for CatBoostClassifier: DiscriminationThreshold function from yellowbricks.classifier module is not yet supported for this model class
+- Shap plots for KNeighborsClassifier and GaussianNB: For generating shap values for these model classes, Kernel explainer from Shap module can be used but with large computational time.
+- Shap plots for XGBClassifier with dart booster: Tree explainer from Shap module currently doesn't support XGBClassifier with dart booster.</b>
+
 ---
 #### 3. Summary of model evaluation metrics from best classification model
 
