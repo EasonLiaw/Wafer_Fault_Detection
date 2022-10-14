@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 11th October 2022
+Last Modified: 14th October 2022
 '''
 
 import warnings
@@ -18,12 +18,15 @@ class pred_Preprocessor:
             Method Name: __init__
             Description: This method initializes instance of Preprocessor class
             Output: None
+
+            Parameters:
+            - file_object: String path of logging text file
         '''
         self.file_object = file_object
         self.log_writer = App_Logger()
 
 
-    def extract_compiled_data(self, path):
+    def extract_compiled_data(self):
         '''
             Method Name: extract_compiled_data
             Description: This method extracts data from a csv file and converts it into a pandas dataframe.
@@ -32,9 +35,8 @@ class pred_Preprocessor:
         '''
         self.log_writer.log(
             self.file_object, "Start reading compiled data from database")
-        self.path = path
         try:
-            data = pd.read_csv(path)
+            data = pd.read_csv(self.data_path)
         except Exception as e:
             self.log_writer.log(
                 self.file_object, f"Fail to read compiled data from database with the following error: {e}")
@@ -51,17 +53,19 @@ class pred_Preprocessor:
             Description: This method removes duplicated rows from a pandas dataframe.
             Output: A pandas DataFrame after removing duplicated rows. In addition, duplicated records that are removed will be stored in a separate csv file labeled "Duplicated_Records_Removed.csv"
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
         '''
         self.log_writer.log(
             self.file_object, "Start handling duplicated rows in the dataset")
-        self.data = data
-        if len(self.data[self.data.duplicated()]) == 0:
+        if len(data[data.duplicated()]) == 0:
             self.log_writer.log(
                 self.file_object, "No duplicated rows found in the dataset")
         else:
             try:
-                self.data[self.data.duplicated()].to_csv('Intermediate_Pred_Results/Duplicated_Records_Removed.csv', index=False)
-                self.data = self.data.drop_duplicates(ignore_index=True)
+                data[data.duplicated()].to_csv('Intermediate_Pred_Results/Duplicated_Records_Removed.csv', index=False)
+                data = data.drop_duplicates(ignore_index=True)
             except Exception as e:
                 self.log_writer.log(
                     self.file_object, f"Fail to remove duplicated rows with the following error: {e}")
@@ -69,23 +73,28 @@ class pred_Preprocessor:
                     f"Fail to remove duplicated rows with the following error: {e}")
         self.log_writer.log(
             self.file_object, "Finish handling duplicated rows in the dataset")
-        return self.data
+        return data
 
     
-    def data_preprocessing(self, data_path, train_path, col_remove):
+    def data_preprocessing(self, data_path, train_path, index_col):
         '''
             Method Name: data_preprocessing
             Description: This method performs all the data preprocessing tasks for the data.
             Output: A pandas dataframe, where all the data preprocessing tasks are performed.
-            On Failure: Logging error and raise exception
+
+            Parameters:
+            - data_path: String path where data compiled from database is located
+            - train_path: String path where results from model training process is located
+            - index_col: Name of column related to unique IDs
         '''
         self.log_writer.log(self.file_object, 'Start of data preprocessing')
         self.train_path = train_path
         self.data_path = data_path
-        data = self.extract_compiled_data(self.data_path)
-        index = data[col_remove]
+        self.index_col = index_col
+        data = self.extract_compiled_data()
+        index = data[self.index_col]
         data = self.remove_duplicated_rows(data)
-        data.drop(col_remove,axis=1,inplace=True)
+        data.drop(self.index_col,axis=1,inplace=True)
         self.log_writer.log(
             self.file_object, "Start adding missing indicator to features with missing values")
         missingindicatorobject = joblib.load(

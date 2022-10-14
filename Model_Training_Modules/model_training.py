@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 11th October 2022
+Last Modified: 13th October 2022
 '''
 
 import warnings
@@ -32,7 +32,7 @@ from catboost import CatBoostClassifier
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import QuantileTransformer, RobustScaler, StandardScaler, MinMaxScaler
-from sklearn.model_selection import cross_validate, StratifiedKFold
+from sklearn.model_selection import cross_validate, StratifiedKFold, learning_curve
 from sklearn.feature_selection import mutual_info_classif, f_classif, SelectKBest, SelectFromModel
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -58,6 +58,9 @@ class model_trainer:
             Method Name: __init__
             Description: This method initializes instance of model_trainer class
             Output: None
+
+            Parameters:
+            - file_object: String path of logging text file
         '''
         self.file_object = file_object
         self.log_writer = App_Logger()
@@ -82,6 +85,10 @@ class model_trainer:
             Method Name: setting_attributes
             Description: This method sets attributes of metric results for training and validation set from a given Optuna trial
             Output: None
+
+            Parameters:
+            - trial: Optuna trial object
+            - cv_results: Dictionary object related to results from cross validate function
         '''
         trial.set_user_attr("train_balanced_accuracy", 
                             np.nanmean(cv_results['train_balanced_accuracy']))
@@ -116,6 +123,11 @@ class model_trainer:
             Method Name: pipeline_missing_step
             Description: This method adds custom transformer with MissingTransformer class into pipeline for handling missing data.
             Output: None
+
+            Parameters:
+            - pipeline: imblearn pipeline object
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
         '''
         missing_transformer = ColumnTransformer(
             [('missingtransform',MissingTransformer(continuous_columns),continuous_index)],remainder='passthrough',n_jobs=2)
@@ -128,6 +140,11 @@ class model_trainer:
             Method Name: pipeline_balancing_step
             Description: This method adds SMOTETomek or SMOTEENN object with SMOTENC or nothing into pipeline for handling imbalanced data.
             Output: None
+
+            Parameters:
+            - pipeline: imblearn pipeline object
+            - balancing_indicator: String name indicating method of handling imbalanced data
+            - categorical_index: List of categorical variable index
         '''
         if balancing_indicator == 'smotetomek':
             pipeline.steps.append(('smote',SMOTETomek(random_state=random_state, smote=SMOTENC(categorical_index, random_state=random_state, n_jobs=2), n_jobs=2)))
@@ -143,6 +160,12 @@ class model_trainer:
             Method Name: pipeline_outlier_step
             Description: This method adds custom transformer with OutlierCapTransformer class into pipeline for capping outliers if relevant.
             Output: None
+
+            Parameters:
+            - pipeline: imblearn pipeline object
+            - outlier_indicator: String name indicating method of handling outliers
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
         '''
         if outlier_indicator == 'capped':
             outlier_transformer = ColumnTransformer(
@@ -156,6 +179,12 @@ class model_trainer:
             Method Name: pipeline_scaling_step
             Description: This method adds custom transformer with ScalingTransformer class into pipeline for scaling data.
             Output: None
+
+            Parameters:
+            - pipeline: imblearn pipeline object
+            - scaling_indicator: String that represents method of performing feature scaling. (Accepted values are 'Standard', 'MinMax', 'Robust', 'Combine' and 'no').
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
         '''
         scaling_transformer = ColumnTransformer(
             [('scaling',ScalingTransformer(scaling_indicator,continuous_columns),continuous_index)],remainder='passthrough',n_jobs=2)
@@ -168,18 +197,44 @@ class model_trainer:
             Method Name: pipeline_feature_selection_step
             Description: This method adds custom transformer with FeatureSelectionTransformer class into pipeline for performing feature selection.
             Output: None
+    
+            Parameters:
+            - pipeline: imblearn pipeline object
+            - trial: Optuna trial object
+            - fs_method: String name indicating method of feature selection
+            - drop_correlated: String indicator of dropping highly correlated features (yes or no)
+            - continuous_columns: List of continuous variable names
+            - categorical_columns: List of categorical variable names
+            - clf: Model object
+            - scaling_indicator: String that represents method of performing feature scaling. (Accepted values are 'Standard', 'MinMax', 'Robust', 'Combine' and 'no'). Default value is 'no'
+            - cluster_indicator: String indicator of including cluster-related feature (yes or no). Default value is 'no'
+            - damping: Float value (range from 0.5 to 1 not inclusive) as an additional hyperparameter for Affinity Propagation clustering algorithm. Default value is None.
         '''
         if fs_method not in ['BorutaShap','FeatureWiz']:
             number_to_select = trial.suggest_int('number_features',1,30)
         else:
             number_to_select = None
         trial.set_user_attr("number_features", number_to_select)
-        pipeline.steps.append(('featureselection',FeatureSelectionTransformer(fs_method, drop_correlated, continuous_columns, categorical_columns, clf, scaling_indicator = scaling_indicator, cluster_indicator = cluster_indicator, damping=damping, number = number_to_select)))
+        pipeline.steps.append(
+            ('featureselection',FeatureSelectionTransformer(fs_method, drop_correlated, continuous_columns, categorical_columns, clf, scaling_indicator = scaling_indicator, cluster_indicator = cluster_indicator, damping=damping, number = number_to_select)))
 
 
     def pipeline_setup(
-        pipeline, trial, continuous_columns, continuous_index,categorical_columns, categorical_index, clf):
-
+            pipeline, trial, continuous_columns, continuous_index,categorical_columns, categorical_index, clf):
+        '''
+            Method Name: pipeline_setup
+            Description: This method configures pipeline for model training, which varies depending on model class and preprocessing related parameters selected by Optuna.
+            Output: None
+    
+            Parameters:
+            - pipeline: imblearn pipeline object
+            - trial: Optuna trial object
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+            - clf: Model object
+        '''
         missing_indicator = trial.suggest_categorical('missing',['yes','no']) if type(clf).__name__ in ['XGBClassifier','LGBMClassifier','CatBoostClassifier'] else 'no'
         trial.set_user_attr("missing_indicator", missing_indicator)
         if missing_indicator == 'no':
@@ -238,6 +293,15 @@ class model_trainer:
             Method Name: lr_objective
             Description: This method sets the objective function for logistic regression model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         C = trial.suggest_float('C',0.0001,1,log=True)
         class_weight = trial.suggest_categorical(
@@ -265,6 +329,15 @@ class model_trainer:
             Method Name: svc_objective
             Description: This method sets the objective function for linear support vector classifier model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         C = trial.suggest_float('C',0.0001,1,log=True)
         class_weight = trial.suggest_categorical(
@@ -289,6 +362,15 @@ class model_trainer:
             Method Name: knn_objective
             Description: This method sets the objective function for K-neighbors classifier model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         n_neighbors = trial.suggest_categorical('n_neighbors', [3, 5, 7, 9, 11])
         weights = trial.suggest_categorical('weights', ['uniform', 'distance'])
@@ -312,6 +394,16 @@ class model_trainer:
             Method Name: dt_objective
             Description: This method sets the objective function for Decision Tree classifier model by setting various hyperparameters, including pipeline steps for different Optuna trials using post pruning.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+    
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+            - path: Dictionary object, with attributes ccp_alphas and impurities
         '''
         ccp_alpha = trial.suggest_categorical('ccp_alpha',path.ccp_alphas[:-1])
         class_weight = trial.suggest_categorical(
@@ -334,6 +426,16 @@ class model_trainer:
             Method Name: rf_objective
             Description: This method sets the objective function for Random Forest classifier model by setting various hyperparameters, including pipeline steps for different Optuna trials using post pruning.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+            - path: Dictionary object, with attributes ccp_alphas and impurities
         '''
         ccp_alpha = trial.suggest_categorical('ccp_alpha',path.ccp_alphas[:-1])
         class_weight = trial.suggest_categorical(
@@ -358,6 +460,16 @@ class model_trainer:
             Method Name: et_objective
             Description: This method sets the objective function for Extra Trees classifier model by setting various hyperparameters, including pipeline steps for different Optuna trials using post pruning.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+            - path: Dictionary object, with attributes ccp_alphas and impurities
         '''
         ccp_alpha = trial.suggest_categorical('ccp_alpha',path.ccp_alphas[:-1])
         class_weight = trial.suggest_categorical('class_weight', 
@@ -377,11 +489,20 @@ class model_trainer:
 
 
     def gaussiannb_objective(
-        trial,X_train_data,y_train_data, continuous_columns, continuous_index, categorical_columns, categorical_index):
+            trial,X_train_data,y_train_data, continuous_columns, continuous_index, categorical_columns, categorical_index):
         '''
             Method Name: gaussiannb_objective
             Description: This method sets the objective function for Gaussian Naive Bayes model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         var_smoothing = trial.suggest_float(
             'var_smoothing',0.000000001,1,log=True)
@@ -401,6 +522,15 @@ class model_trainer:
             Method Name: adaboost_objective
             Description: This method sets the objective function for AdaBoost model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         learning_rate = trial.suggest_float('learning_rate',0.01,1,log=True)
         n_estimators = trial.suggest_categorical('n_estimators',[100])
@@ -421,6 +551,16 @@ class model_trainer:
             Method Name: gradientboost_objective
             Description: This method sets the objective function for Gradient Boosting classifier model by setting various hyperparameters, including pipeline steps for different Optuna trials using post pruning.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+            - path: Dictionary object, with attributes ccp_alphas and impurities
         '''
         ccp_alpha = trial.suggest_categorical('ccp_alpha',path.ccp_alphas[:-1])
         loss = trial.suggest_categorical('loss',['log_loss','exponential'])
@@ -446,6 +586,15 @@ class model_trainer:
             Method Name: xgboost_objective
             Description: This method sets the objective function for XGBoost model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         smallest_class_count = y_train_data.values.sum()
         largest_class_count = len(y_train_data) - smallest_class_count
@@ -471,8 +620,7 @@ class model_trainer:
         single_precision_histogram = trial.suggest_categorical(
             'single_precision_histogram',[True])
         clf = XGBClassifier(
-            objective=objective, eval_metric=eval_metric, verbosity=verbosity,
-            tree_method = tree_method, booster=booster, eta=eta, gamma=gamma,single_precision_histogram=single_precision_histogram,  min_child_weight=min_child_weight, max_depth=max_depth,scale_pos_weight=scale_pos_weight, subsample=subsample,colsample_bytree=colsample_bytree, lambdas=lambdas, alpha=alpha, random_state=random_state, num_round=num_round, rate_drop=rate_drop)
+            objective=objective, eval_metric=eval_metric, verbosity=verbosity,tree_method = tree_method, booster=booster, eta=eta, gamma=gamma,single_precision_histogram=single_precision_histogram,  min_child_weight=min_child_weight, max_depth=max_depth,scale_pos_weight=scale_pos_weight, subsample=subsample,colsample_bytree=colsample_bytree, lambdas=lambdas, alpha=alpha, random_state=random_state, num_round=num_round, rate_drop=rate_drop)
         pipeline = Pipeline(steps=[], memory='Caching')
         model_trainer.pipeline_setup(
             pipeline, trial, continuous_columns, continuous_index,categorical_columns, categorical_index, clf)
@@ -488,6 +636,15 @@ class model_trainer:
             Method Name: lightgbm_objective
             Description: This method sets the objective function for LightGBM model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         is_unbalance = trial.suggest_categorical(
             'is_unbalance',['true', 'false'])
@@ -508,8 +665,7 @@ class model_trainer:
         device_type = trial.suggest_categorical('device_type',['gpu'])
         gpu_use_dp = trial.suggest_categorical('gpu_use_dp',[False])
         clf = LGBMClassifier(
-            num_leaves=num_leaves, learning_rate=learning_rate, 
-            is_unbalance = is_unbalance, boosting_type=boosting_type, max_depth=max_depth, min_child_samples = min_child_samples, max_bin=max_bin, reg_alpha=reg_alpha, reg_lambda=reg_lambda, subsample = subsample, subsample_freq = subsample_freq, min_split_gain=min_split_gain, random_state=random_state, n_estimators=n_estimators, device_type=device_type,gpu_use_dp=gpu_use_dp, drop_rate=drop_rate, drop_seed = random_state)
+            num_leaves=num_leaves, learning_rate=learning_rate, is_unbalance = is_unbalance, boosting_type=boosting_type, max_depth=max_depth, min_child_samples = min_child_samples, max_bin=max_bin, reg_alpha=reg_alpha, reg_lambda=reg_lambda, subsample = subsample, subsample_freq = subsample_freq, min_split_gain=min_split_gain, random_state=random_state, n_estimators=n_estimators, device_type=device_type,gpu_use_dp=gpu_use_dp, drop_rate=drop_rate, drop_seed = random_state)
         pipeline = Pipeline(steps=[], memory='Caching')
         model_trainer.pipeline_setup(
             pipeline, trial, continuous_columns, continuous_index,categorical_columns, categorical_index, clf)
@@ -525,6 +681,15 @@ class model_trainer:
             Method Name: catboost_objective
             Description: This method sets the objective function for CatBoost model by setting various hyperparameters, including pipeline steps for different Optuna trials.
             Output: Single floating point value that represents f1 score of given model on validation set from using 3 fold cross validation
+
+            Parameters:
+            - trial: Optuna trial object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         max_depth = trial.suggest_int('max_depth',4,10)
         l2_leaf_reg = trial.suggest_int('l2_leaf_reg',2,10)
@@ -544,7 +709,6 @@ class model_trainer:
         pipeline = Pipeline(steps=[], memory='Caching')
         model_trainer.pipeline_setup(
             pipeline, trial, continuous_columns, continuous_index,categorical_columns, categorical_index, clf)
-        cv_jobs = 1
         cv_results = model_trainer.classification_metrics(
             clf,pipeline,X_train_data,y_train_data, cv_jobs=1)
         model_trainer.setting_attributes(trial,cv_results)
@@ -556,6 +720,13 @@ class model_trainer:
             Method Name: classification_metrics
             Description: This method performs 3-fold cross validation on the training set and performs model evaluation on the validation set.
             Output: Dictionary of metric scores from 3-fold cross validation.
+
+            Parameters:
+            - clf: Model object
+            - pipeline: imblearn pipeline object
+            - X_train_data: Features from dataset
+            - y_train_data: Target column from dataset
+            - cv_jobs: Number of cross validation jobs to run in parallel
         '''
         pipeline_copy = clone(pipeline)
         pipeline_copy.steps.append(('clf',clf))
@@ -570,7 +741,7 @@ class model_trainer:
         return cv_results
 
 
-    def optuna_optimizer(self, obj, n_trials, folderpath, fold):
+    def optuna_optimizer(self, obj, n_trials, fold):
         '''
             Method Name: optuna_optimizer
             Description: This method creates a new Optuna study object and optimizes the given objective function. In addition, the following plots and results are also created and saved:
@@ -578,8 +749,14 @@ class model_trainer:
             2. Optimization History Plot
             3. Optuna study object
             4. Optimization Results (csv format)
+            
             Output: Single best trial object
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - obj: Optuna objective function
+            - n_trials: Number of trials for Optuna hyperparameter tuning
+            - fold: Fold number from nested cross-validation in outer loop
         '''
         try:
             sampler = optuna.samplers.TPESampler(
@@ -588,16 +765,17 @@ class model_trainer:
             study.optimize(
                 obj, n_trials=n_trials, gc_after_trial=True, show_progress_bar=True)
             trial = study.best_trial
-            param_imp_fig = optuna.visualization.plot_param_importances(study)
-            opt_fig = optuna.visualization.plot_optimization_history(study)
-            param_imp_fig.write_image(
-                folderpath+ obj.__name__ +f'/HP_Importances_{obj.__name__}_Fold_{fold}.png')
-            opt_fig.write_image(
-                folderpath+ obj.__name__ +f'/Optimization_History_{obj.__name__}_Fold_{fold}.png')
-            joblib.dump(
-                study, folderpath + obj.__name__ + f'/OptStudy_{obj.__name__}_Fold_{fold}.pkl')
+            if trial.number !=0:
+                param_imp_fig = optuna.visualization.plot_param_importances(study)
+                opt_fig = optuna.visualization.plot_optimization_history(study)
+                param_imp_fig.write_image(
+                    self.folderpath+ obj.__name__ +f'/HP_Importances_{obj.__name__}_Fold_{fold}.png')
+                opt_fig.write_image(
+                    self.folderpath+ obj.__name__ +f'/Optimization_History_{obj.__name__}_Fold_{fold}.png')
+                joblib.dump(
+                    study, self.folderpath + obj.__name__ + f'/OptStudy_{obj.__name__}_Fold_{fold}.pkl')
             study.trials_dataframe().to_csv(
-                folderpath + obj.__name__ + f"/Hyperparameter_Tuning_Results_{obj.__name__}_Fold_{fold}.csv",index=False)
+                self.folderpath + obj.__name__ + f"/Hyperparameter_Tuning_Results_{obj.__name__}_Fold_{fold}.csv",index=False)
             del study
         except Exception as e:
             self.log_writer.log(
@@ -605,6 +783,239 @@ class model_trainer:
             raise Exception(
                 f'Performing optuna hyperparameter tuning for {obj.__name__} model failed with the following error: {e}')
         return trial
+
+    
+    def confusion_matrix_plot(
+            self, clf, figtitle, plotname, actual_labels, pred_labels):
+        '''
+            Method Name: confusion_matrix_plot
+            Description: This method plots confusion matrix and saves plot within the given model class folder.
+            Output: None
+
+            Parameters:
+            - clf: Model object
+            - figtitle: String that represents part of title figure
+            - plotname: String that represents part of image name
+            - actual_labels: Actual target labels from dataset
+            - pred_labels: Predicted target labels from model
+        '''
+        cmd = ConfusionMatrixDisplay.from_predictions(
+            actual_labels, pred_labels)
+        cmd.ax_.set_title(f"{type(clf).__name__} {figtitle}")
+        plt.grid(False)
+        cmd.figure_.savefig(
+            self.folderpath+type(clf).__name__+f'/Confusion_Matrix_{type(clf).__name__}_{plotname}.png')
+        plt.clf()
+
+
+    def classification_report_plot(
+            self, clf, figtitle, plotname, actual_labels, pred_labels):
+        '''
+            Method Name: classification_report_plot
+            Description: This method plots classification report in heatmap form and saves plot within the given model class folder.
+            Output: None
+
+            Parameters:
+            - clf: Model object
+            - figtitle: String that represents part of title figure
+            - plotname: String that represents part of image name
+            - actual_labels: Actual target labels from dataset
+            - pred_labels: Predicted target labels from model
+        '''
+        clf_report = classification_report(
+            actual_labels,pred_labels,target_names=['0','1'],output_dict=True,digits=4)
+        fig = plt.figure()
+        sns.heatmap(
+            pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, fmt=".4f")
+        plt.title(f"{type(clf).__name__} {figtitle}")
+        fig.savefig(
+            self.folderpath+type(clf).__name__+f'/Classification_Report_{type(clf).__name__}_{plotname}.png')
+        plt.clf()
+
+
+    def precision_recall_plot(self, clf, actual_labels, pred_proba):
+        '''
+            Method Name: precision_recall_plot
+            Description: This method plots precision recall curve and saves plot within the given model class folder.
+            Output: None
+
+            Parameters:
+            - clf: Model object
+            - actual_labels: Actual target labels from dataset
+            - pred_proba: Predicted probability of target being positive (1) from model
+        '''
+        display = PrecisionRecallDisplay.from_predictions(
+            actual_labels, pred_proba, name= type(clf).__name__)
+        display.ax_.set_title(f"{type(clf).__name__} Precision-Recall curve")
+        display.figure_.savefig(
+            self.folderpath+type(clf).__name__+f'/PrecisionRecall_Curve_{type(clf).__name__}.png')
+        plt.clf()
+
+
+    def binary_threshold_plot(self, clf, input_data, output_data):
+        '''
+            Method Name: binary_threshold_plot
+            Description: This method plots discrimination threshold for binary classification and saves plot within the given model class folder.
+            Note that this function will not work for CatBoost, since DiscriminationThreshold function from yellowbricks.classifier module is not yet supported for this model class.
+            Output: None
+
+            Parameters:
+            - clf: Model object
+            - input_data: Features from dataset
+            - output_data: Target column from dataset
+        '''
+        if type(clf).__name__ not in ['CatBoostClassifier']:
+            visualizer = DiscriminationThreshold(
+                clf, random_state=random_state, cv= StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state))
+            visualizer.fit(input_data,output_data)
+            visualizer.show(outpath=self.folderpath+type(clf).__name__+f'/Binary_Threshold_{type(clf).__name__}.png',clear_figure=True)
+            joblib.dump(visualizer, 'Saved_Models/Binary_Threshold.pkl')
+
+
+    def learning_curve_plot(self, clf, input_data, output_data):
+        '''
+            Method Name: learning_curve_plot
+            Description: This method plots learning curve of 5 fold cross validation and saves plot within the given model class folder.
+            Output: None
+
+            Parameters:
+            - clf: Model object
+            - input_data: Features from dataset
+            - output_data: Target column from dataset
+        '''
+        if type(clf).__name__ == 'CatBoostClassifier':
+            train_sizes, train_scores, validation_scores = learning_curve(estimator = clf, X = input_data, y = output_data, cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state), scoring='f1', train_sizes=np.linspace(0.3, 1.0, 10))
+            plt.style.use('seaborn-whitegrid')
+            plt.grid(True)
+            plt.fill_between(train_sizes, train_scores.mean(axis = 1) - train_scores.std(axis = 1), train_scores.mean(axis = 1) + train_scores.std(axis = 1), alpha=0.25, color='blue')
+            plt.plot(train_sizes, train_scores.mean(axis = 1), label = 'Training Score', marker='.',markersize=14)
+            plt.fill_between(train_sizes, validation_scores.mean(axis = 1) - validation_scores.std(axis = 1), validation_scores.mean(axis = 1) + validation_scores.std(axis = 1), alpha=0.25, color='green')
+            plt.plot(train_sizes, validation_scores.mean(axis = 1), label = 'Cross Validation Score', marker='.',markersize=14)
+            plt.ylabel('Score')
+            plt.xlabel('Training instances')
+            plt.title(f'Learning Curve for {type(clf).__name__}')
+            plt.legend(frameon=True, loc='best')
+            plt.savefig(
+                self.folderpath+type(clf).__name__+f'/LearningCurve_{type(clf).__name__}.png',bbox_inches='tight')
+            plt.clf()
+        else:
+            visualizer = LearningCurve(
+                clf, cv= StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state), scoring='f1', train_sizes=np.linspace(0.3, 1.0, 10))
+            visualizer.fit(input_data,output_data)
+            visualizer.show(
+                outpath=self.folderpath+type(clf).__name__+f'/LearningCurve_{type(clf).__name__}.png',clear_figure=True)
+
+
+    def shap_plot(self, clf, input_data):
+        '''
+            Method Name: shap_plot
+            Description: This method plots feature importance and its summary using shap values and saves plot within the given model class folder. Note that this function will not work specifically for XGBoost models that use 'dart' booster. In addition, shap plots for KNeighbors and GaussianNB require use of shap's Kernel explainer that involves high computational time. Thus, this function excludes both KNeighbors and GaussianNB.
+            Output: None
+
+            Parameters:
+            - clf: Model object
+            - input_data: Features from dataset
+        '''
+        if (type(clf).__name__ not in ['KNeighborsClassifier','GaussianNB']):
+            if type(clf).__name__ in ['LogisticRegression','LinearSVC']:
+                explainer = shap.LinearExplainer(clf, input_data)
+                explainer_obj = explainer(input_data)
+                shap_values = explainer.shap_values(input_data)
+            else:
+                if ('dart' in clf.get_params().values()) and (type(clf).__name__ == 'XGBClassifier'):
+                    return
+                explainer = shap.TreeExplainer(clf)
+                if type(clf).__name__ in ['GradientBoostingClassifier','XGBClassifier','CatBoostClassifier']:
+                    explainer_obj = explainer(input_data)
+                    shap_values = explainer.shap_values(input_data)
+                else:
+                    explainer_obj = explainer(input_data)[:,:,1]
+                    shap_values = explainer.shap_values(input_data)[1]
+            plt.figure()
+            shap.summary_plot(
+                shap_values, input_data, plot_type="bar", show=False, max_display=40)
+            plt.title(f'Shap Feature Importances for {type(clf).__name__}')
+            plt.savefig(
+                self.folderpath+type(clf).__name__+f'/Shap_Feature_Importances_{type(clf).__name__}.png',bbox_inches='tight')
+            plt.clf()
+            plt.figure()
+            shap.plots.beeswarm(explainer_obj, show=False, max_display=40)
+            plt.title(f'Shap Summary Plot for {type(clf).__name__}')
+            plt.savefig(
+                self.folderpath+type(clf).__name__+f'/Shap_Summary_Plot_{type(clf).__name__}.png',bbox_inches='tight')
+            plt.clf()
+
+
+    def model_training(
+            self, clf, obj, continuous_columns, continuous_index, categorical_columns, categorical_index, input_data, output_data, n_trials, fold_num):
+        '''
+            Method Name: model_training
+            Description: This method performs Optuna hyperparameter tuning using 3 fold cross validation on given dataset. The best hyperparameters with the best pipeline identified is used for model training.
+            
+            Output: 
+            - model_copy: Trained model object
+            - best_trial: Optuna's best trial object from hyperparameter tuning
+            - input_data_transformed: Transformed features from dataset
+            - output_data_transformed: Transformed target column from dataset
+            - best_pipeline: imblearn pipeline object
+
+            On Failure: Logging error and raise exception
+
+            Parameters:
+            - clf: Model object
+            - obj: Optuna objective function
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+            - input_data: Features from dataset
+            - output_data: Target column from dataset
+            - n_trials: Number of trials for Optuna hyperparameter tuning
+            - fold_num: Indication of fold number for model training (can be integer or string "overall")
+        '''
+        if type(clf).__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier','ExtraTreesClassifier','GradientBoostingClassifier']:
+            temp_pipeline = Pipeline(steps=[], memory='Caching')
+            model_trainer.pipeline_missing_step(
+                temp_pipeline, continuous_columns, continuous_index)
+            X_train_data_copy = temp_pipeline.steps[0][1].fit_transform(input_data,output_data)
+            temp_clf = DecisionTreeClassifier(random_state=random_state)
+            path = temp_clf.cost_complexity_pruning_path(X_train_data_copy, output_data)
+            func = lambda trial: obj(
+                trial, input_data, output_data, continuous_columns, continuous_index, categorical_columns, categorical_index, path)
+        else:
+            func = lambda trial: obj(
+                trial, input_data, output_data, continuous_columns, continuous_index, categorical_columns, categorical_index)
+        func.__name__ = type(clf).__name__
+        self.log_writer.log(
+            self.file_object, f"Start hyperparameter tuning for {type(clf).__name__} for fold {fold_num}")
+        best_trial = self.optuna_optimizer(func, n_trials, fold_num)
+        self.log_writer.log(
+            self.file_object, f"Hyperparameter tuning for {type(clf).__name__} completed for fold {fold_num}")
+        self.log_writer.log(
+            self.file_object, f"Start using best pipeline for {type(clf).__name__} for transforming training and validation data for fold {fold_num}")
+        best_pipeline = best_trial.user_attrs['Pipeline']
+        input_data_transformed = best_pipeline.fit_transform(
+            input_data, output_data)
+        if 'smote' in best_pipeline.named_steps.keys():
+            output_data_transformed = best_pipeline.steps[1][1].fit_resample(best_pipeline.steps[0][1].fit_transform(input_data, output_data), output_data)[1]
+        else:
+            output_data_transformed = output_data
+        self.log_writer.log(
+            self.file_object, f"Finish using best pipeline for {type(clf).__name__} for transforming training and validation data for fold {fold_num}")
+        for parameter in ['missing','balancing','outlier','scaling','feature_selection','number_features','drop_correlated','drop_correlated_missing','feature_selection_missing','damping','cluster_indicator']:
+            if parameter in best_trial.params.keys():
+                best_trial.params.pop(parameter)
+        for weight_param in ['class_weight','auto_class_weights']:
+            if weight_param in best_trial.params.keys():
+                if best_trial.params[weight_param] == 'None':
+                    best_trial.params.pop(weight_param)
+        self.log_writer.log(
+            self.file_object, f"Start evaluating model performance for {type(clf).__name__} on validation set for fold {fold_num}")
+        model_copy = clone(clf)
+        model_copy = model_copy.set_params(**best_trial.params)
+        model_copy.fit(
+            input_data_transformed, output_data_transformed['Output'])
+        return model_copy, best_trial, input_data_transformed, output_data_transformed, best_pipeline
 
 
     def hyperparameter_tuning(
@@ -618,8 +1029,20 @@ class model_trainer:
             3. Confusion Matrix with default threshold (0.5) image
             4. Classification Report heatmap with default threshold (0.5) image
             5. Precision-Recall curve image
+            
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - obj: Optuna objective function
+            - clf: Model object
+            - n_trials: Number of trials for Optuna hyperparameter tuning
+            - input_data: Features from dataset
+            - output_data: Target column from dataset
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
         '''
         try:
             num_folds = 5
@@ -635,51 +1058,9 @@ class model_trainer:
             for fold, (outer_train_idx, outer_valid_idx) in enumerate(skfold.split(input_data, output_data)):
                 input_sub_train_data = input_data.iloc[outer_train_idx,:].reset_index(drop=True)
                 output_sub_train_data = output_data.iloc[outer_train_idx].reset_index(drop=True)
-                model = clone(clf)
-                if type(model).__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier','ExtraTreesClassifier','GradientBoostingClassifier']:
-                    temp_pipeline = Pipeline(steps=[], memory='Caching')
-                    model_trainer.pipeline_missing_step(
-                        temp_pipeline, continuous_columns, continuous_index)
-                    X_train_data_copy = temp_pipeline.steps[0][1].fit_transform(input_sub_train_data,output_sub_train_data)
-                    temp_clf = DecisionTreeClassifier(random_state=random_state)
-                    path = temp_clf.cost_complexity_pruning_path(X_train_data_copy, output_sub_train_data)
-                    func = lambda trial: obj(
-                        trial, input_sub_train_data, output_sub_train_data, continuous_columns, continuous_index, categorical_columns, categorical_index, path)
-                else:
-                    func = lambda trial: obj(
-                        trial, input_sub_train_data, output_sub_train_data, continuous_columns, continuous_index, categorical_columns, categorical_index)
-                func.__name__ = type(model).__name__
-                self.log_writer.log(
-                    self.file_object, f"Start hyperparameter tuning for {type(model).__name__} for fold {fold+1}")
-                best_trial = self.optuna_optimizer(
-                    func,n_trials, self.folderpath, fold+1)
-                self.log_writer.log(
-                    self.file_object, f"Hyperparameter tuning for {type(model).__name__} completed for fold {fold+1}")
-                self.log_writer.log(
-                    self.file_object, f"Start using best pipeline for {type(model).__name__} for transforming training and validation data for fold {fold+1}")
-                best_pipeline = best_trial.user_attrs['Pipeline']
-                input_train_data_transformed = best_pipeline.fit_transform(input_sub_train_data, output_sub_train_data)
+                model_copy, best_trial, input_train_data_transformed, output_train_data_transformed, best_pipeline = self.model_training(clf, obj, continuous_columns, continuous_index, categorical_columns, categorical_index, input_sub_train_data, output_sub_train_data, n_trials, fold+1)
                 input_val_data = input_data.iloc[outer_valid_idx,:].reset_index(drop=True)
                 input_val_data_transformed = best_pipeline.transform(input_val_data)
-                if 'smote' in best_pipeline.named_steps.keys():
-                    output_train_data_transformed = best_pipeline.steps[1][1].fit_resample(best_pipeline.steps[0][1].fit_transform(input_sub_train_data,output_sub_train_data),output_sub_train_data)[1]
-                else:
-                    output_train_data_transformed = output_sub_train_data
-                self.log_writer.log(
-                    self.file_object, f"Finish using best pipeline for {type(model).__name__} for transforming training and validation data for fold {fold+1}")
-                for parameter in ['missing','balancing','outlier','scaling','feature_selection','number_features','drop_correlated','drop_correlated_missing','feature_selection_missing','damping','cluster_indicator']:
-                    if parameter in best_trial.params.keys():
-                        best_trial.params.pop(parameter)
-                for weight_param in ['class_weight','auto_class_weights']:
-                    if weight_param in best_trial.params.keys():
-                        if best_trial.params[weight_param] == 'None':
-                            best_trial.params.pop(weight_param)
-                self.log_writer.log(
-                    self.file_object, f"Start evaluating model performance for {type(model).__name__} on validation set for fold {fold+1}")
-                model_copy = clone(model)
-                model_copy = model_copy.set_params(**best_trial.params)
-                model_copy.fit(
-                    input_train_data_transformed,output_train_data_transformed)
                 val_pred = model_copy.predict(input_val_data_transformed)
                 val_pred_proba = model_copy.predict_proba(input_val_data_transformed)[:,1] if type(model_copy).__name__ != 'LinearSVC' else model_copy._predict_proba_lr(input_val_data_transformed)[:,1]
                 actual_labels.extend(output_data.iloc[outer_valid_idx]['Output'].tolist())
@@ -724,213 +1105,95 @@ class model_trainer:
                 recall_test_cv.append(recall_outer_val_value)
                 ap_test_cv.append(ap_outer_val_value)
                 self.log_writer.log(
-                    self.file_object, f"Evaluating model performance for {type(model).__name__} on validation set completed for fold {fold+1}")
+                    self.file_object, f"Evaluating model performance for {type(clf).__name__} on validation set completed for fold {fold+1}")
                 optimized_results = pd.DataFrame({
-                    'Feature_selector':best_trial.user_attrs['feature_selection'], 
-                    'Drop_correlated_features': best_trial.user_attrs['drop_correlated'], 'Models': type(model_copy).__name__, 'Best_params': str(model_copy.get_params()),
-                    'Cluster_Indicator': best_trial.user_attrs['cluster_indicator'],
-                    'Damping_cluster_value': best_trial.user_attrs['damping'],
-                    'Number_features': [len(input_train_data_transformed.columns.tolist())], 
-                    'Features': [input_train_data_transformed.columns.tolist()], 
-                    'Balancing_handled': best_trial.user_attrs['balancing_indicator'], 
-                    'Missing_values_handled': best_trial.user_attrs['missing_indicator'], 
-                    'Outlier_handling_method': best_trial.user_attrs['outlier_indicator'], 
-                    'Feature_scaling_handled': best_trial.user_attrs['scaling_indicator'], 'Outer_fold': fold+1,'bal_acc_inner_train_cv': best_trial.user_attrs['train_balanced_accuracy'],
-                    'bal_acc_inner_val_cv': best_trial.user_attrs['val_balanced_accuracy'],
-                    'bal_acc_outer_val_cv': [bal_acc_outer_val_value],'precision_inner_train_cv': best_trial.user_attrs['train_precision_score'],
-                    'precision_inner_val_cv': best_trial.user_attrs['val_precision_score'],
-                    'precision_outer_val_cv': [precision_outer_val_value],'recall_inner_train_cv': best_trial.user_attrs['train_recall_score'],
-                    'recall_inner_val_cv': best_trial.user_attrs['val_recall_score'],
-                    'recall_outer_val_cv': [recall_outer_val_value],'f1_inner_train_cv': best_trial.user_attrs['train_f1_score'],
-                    'f1_inner_val_cv': best_trial.user_attrs['val_f1_score'],'f1_outer_val_cv': [f1_outer_val_value],'mc_inner_train_cv': best_trial.user_attrs['train_matthews_corrcoef'],
-                    'mc_inner_val_cv': best_trial.user_attrs['val_matthews_corrcoef'],
-                    'mc_outer_val_cv': [mc_outer_val_value],'average_precision_inner_train_cv': best_trial.user_attrs['train_average_precision_score'],'average_precision_inner_val_cv': best_trial.user_attrs['val_average_precision_score'],'average_precision_outer_val_cv': [ap_outer_val_value]})
+                    'Feature_selector':best_trial.user_attrs['feature_selection'], 'Drop_correlated_features': best_trial.user_attrs['drop_correlated'], 'Models': type(model_copy).__name__, 'Best_params': str(model_copy.get_params()), 'Cluster_Indicator': best_trial.user_attrs['cluster_indicator'], 'Damping_cluster_value': best_trial.user_attrs['damping'], 'Number_features': [len(input_train_data_transformed.columns.tolist())], 'Features': [input_train_data_transformed.columns.tolist()], 'Balancing_handled': best_trial.user_attrs['balancing_indicator'], 'Missing_values_handled': best_trial.user_attrs['missing_indicator'], 'Outlier_handling_method': best_trial.user_attrs['outlier_indicator'], 'Feature_scaling_handled': best_trial.user_attrs['scaling_indicator'], 'Outer_fold': fold+1,'bal_acc_inner_train_cv': best_trial.user_attrs['train_balanced_accuracy'],'bal_acc_inner_val_cv': best_trial.user_attrs['val_balanced_accuracy'],'bal_acc_outer_val_cv': [bal_acc_outer_val_value],'precision_inner_train_cv': best_trial.user_attrs['train_precision_score'],'precision_inner_val_cv': best_trial.user_attrs['val_precision_score'],'precision_outer_val_cv': [precision_outer_val_value],'recall_inner_train_cv': best_trial.user_attrs['train_recall_score'],'recall_inner_val_cv': best_trial.user_attrs['val_recall_score'],'recall_outer_val_cv': [recall_outer_val_value],'f1_inner_train_cv': best_trial.user_attrs['train_f1_score'],'f1_inner_val_cv': best_trial.user_attrs['val_f1_score'],'f1_outer_val_cv': [f1_outer_val_value],'mc_inner_train_cv': best_trial.user_attrs['train_matthews_corrcoef'],'mc_inner_val_cv': best_trial.user_attrs['val_matthews_corrcoef'],'mc_outer_val_cv': [mc_outer_val_value],'average_precision_inner_train_cv': best_trial.user_attrs['train_average_precision_score'],'average_precision_inner_val_cv': best_trial.user_attrs['val_average_precision_score'],'average_precision_outer_val_cv': [ap_outer_val_value]})
                 optimized_results.to_csv(
                     self.folderpath+'Model_Performance_Results_by_Fold.csv', mode='a', index=False, header=not os.path.exists(self.folderpath+'Model_Performance_Results_by_Fold.csv'))
                 self.log_writer.log(
                     self.file_object, f"Optimized results for {type(clf).__name__} model saved for fold {fold+1}")
                 time.sleep(10)
             average_results = pd.DataFrame({
-                'Models': type(model_copy).__name__,
-                'bal_acc_train_cv_avg': np.mean(bal_accuracy_train_cv),
-                'bal_acc_train_cv_std': np.std(bal_accuracy_train_cv),
-                'bal_acc_val_cv_avg': np.mean(bal_accuracy_val_cv),
-                'bal_acc_val_cv_std': np.std(bal_accuracy_val_cv),
-                'bal_acc_test_cv_avg': np.mean(bal_accuracy_test_cv),
-                'bal_acc_test_cv_std': np.std(bal_accuracy_test_cv),
-                'precision_train_cv_avg': np.mean(precision_train_cv),
-                'precision_train_cv_std': np.std(precision_train_cv),
-                'precision_val_cv_avg': np.mean(precision_val_cv),
-                'precision_val_cv_std': np.std(precision_val_cv),
-                'precision_test_cv_avg': np.mean(precision_test_cv),
-                'precision_test_cv_std': np.std(precision_test_cv),
-                'recall_train_cv_avg': np.mean(recall_train_cv),
-                'recall_train_cv_std': np.std(recall_train_cv),
-                'recall_val_cv_avg': np.mean(recall_val_cv),
-                'recall_val_cv_std': np.std(recall_val_cv),
-                'recall_test_cv_avg': np.mean(recall_test_cv),
-                'recall_test_cv_std': np.std(recall_test_cv),
-                'f1_train_cv_avg': np.mean(f1_train_cv),
-                'f1_train_cv_std': np.std(f1_train_cv),
-                'f1_val_cv_avg': np.mean(f1_val_cv),
-                'f1_val_cv_std': np.std(f1_val_cv),
-                'f1_test_cv_avg': np.mean(f1_test_cv),
-                'f1_test_cv_std': np.std(f1_test_cv),
-                'mc_train_cv_avg': np.mean(mc_train_cv),
-                'mc_train_cv_std': np.std(mc_train_cv),
-                'mc_val_cv_avg': np.mean(mc_val_cv),
-                'mc_val_cv_std': np.std(mc_val_cv),
-                'mc_test_cv_avg': np.mean(mc_test_cv),
-                'mc_test_cv_std': np.std(mc_test_cv),
-                'average_precision_train_cv_avg': np.mean(ap_train_cv),
-                'average_precision_train_cv_std': np.std(ap_train_cv),
-                'average_precision_val_cv_avg': np.mean(ap_val_cv),
-                'average_precision_val_cv_std': np.std(ap_val_cv),
-                'average_precision_test_cv_avg': np.mean(ap_test_cv),
-                'average_precision_test_cv_std': np.std(ap_test_cv)}, index=[0]
-            )
+                'Models': type(model_copy).__name__, 'bal_acc_train_cv_avg': np.mean(bal_accuracy_train_cv), 'bal_acc_train_cv_std': np.std(bal_accuracy_train_cv), 'bal_acc_val_cv_avg': np.mean(bal_accuracy_val_cv), 'bal_acc_val_cv_std': np.std(bal_accuracy_val_cv), 'bal_acc_test_cv_avg': np.mean(bal_accuracy_test_cv), 'bal_acc_test_cv_std': np.std(bal_accuracy_test_cv), 'precision_train_cv_avg': np.mean(precision_train_cv), 'precision_train_cv_std': np.std(precision_train_cv), 'precision_val_cv_avg': np.mean(precision_val_cv), 'precision_val_cv_std': np.std(precision_val_cv), 'precision_test_cv_avg': np.mean(precision_test_cv), 'precision_test_cv_std': np.std(precision_test_cv), 'recall_train_cv_avg': np.mean(recall_train_cv), 'recall_train_cv_std': np.std(recall_train_cv), 'recall_val_cv_avg': np.mean(recall_val_cv),'recall_val_cv_std': np.std(recall_val_cv),'recall_test_cv_avg': np.mean(recall_test_cv),'recall_test_cv_std': np.std(recall_test_cv), 'f1_train_cv_avg': np.mean(f1_train_cv), 'f1_train_cv_std': np.std(f1_train_cv), 'f1_val_cv_avg': np.mean(f1_val_cv),'f1_val_cv_std': np.std(f1_val_cv), 'f1_test_cv_avg': np.mean(f1_test_cv), 'f1_test_cv_std': np.std(f1_test_cv),'mc_train_cv_avg': np.mean(mc_train_cv), 'mc_train_cv_std': np.std(mc_train_cv), 'mc_val_cv_avg': np.mean(mc_val_cv),'mc_val_cv_std': np.std(mc_val_cv), 'mc_test_cv_avg': np.mean(mc_test_cv), 'mc_test_cv_std': np.std(mc_test_cv),'average_precision_train_cv_avg': np.mean(ap_train_cv),'average_precision_train_cv_std': np.std(ap_train_cv),'average_precision_val_cv_avg': np.mean(ap_val_cv),'average_precision_val_cv_std': np.std(ap_val_cv),'average_precision_test_cv_avg': np.mean(ap_test_cv),'average_precision_test_cv_std': np.std(ap_test_cv)}, index=[0])
             average_results.to_csv(
                 self.folderpath+'Overall_Model_Performance_Results.csv', mode='a', index=False, header=not os.path.exists(self.folderpath+'Overall_Model_Performance_Results.csv'))
             self.log_writer.log(
-                self.file_object, f"Average optimized results for {type(clf).__name__} model saved")
-            cmd = ConfusionMatrixDisplay.from_predictions(
-                actual_labels, pred_labels)
-            cmd.ax_.set_title(
-                f"{type(clf).__name__} Confusion Matrix (Threshold: 0.5)")
-            plt.grid(False)
-            cmd.figure_.savefig(
-                self.folderpath+type(clf).__name__+f'/Confusion_Matrix_{type(clf).__name__}_Default_Threshold.png')
-            plt.clf()
-            clf_report = classification_report(
-                actual_labels,pred_labels,target_names=['0','1'],output_dict=True,digits=4)
-            fig = plt.figure()
-            sns.heatmap(
-                pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, fmt=".4f")
-            plt.title(
-                f"{type(clf).__name__} Classification Report (Threshold: 0.5)")
-            fig.savefig(
-                self.folderpath+type(clf).__name__+f'/Classification_Report_{type(clf).__name__}_Default_Threshold.png')
-            plt.clf()
-            display = PrecisionRecallDisplay.from_predictions(actual_labels, pred_proba, name= type(clf).__name__)
-            display.ax_.set_title(
-                f"{type(clf).__name__} Precision-Recall curve")
-            display.figure_.savefig(
-                self.folderpath+type(clf).__name__+f'/PrecisionRecall_Curve_{type(clf).__name__}.png')
-            plt.clf()
+                self.file_object, f"Average optimized results for {type(clf).__name__} model saved")                
+            self.confusion_matrix_plot(
+                clf, 'Confusion Matrix (Threshold: 0.5)', 'Default_Threshold', actual_labels, pred_labels)
+            self.classification_report_plot(
+                clf, 'Classification Report (Threshold: 0.5)', 'Default_Threshold', actual_labels, pred_labels)
+            self.precision_recall_plot(clf, actual_labels, pred_proba)
         except Exception as e:
             self.log_writer.log(
                 self.file_object, f'Hyperparameter tuning on {type(clf).__name__} model failed with the following error: {e}')
             raise Exception(
                 f'Hyperparameter tuning on {type(clf).__name__} model failed with the following error: {e}')
 
+
     def final_overall_model(
-        self, obj, clf, input_data, output_data, n_trials, continuous_columns, continuous_index, categorical_columns, categorical_index):
+            self, obj, clf, input_data, output_data, n_trials, continuous_columns, continuous_index, categorical_columns, categorical_index):
+        '''
+            Method Name: final_overall_model
+            Description: This method performs hyperparameter tuning on best model algorithm identified using stratified 3 fold cross validation on entire dataset. The best hyperparameters identified are then used to train the entire dataset before saving model for deployment.
+            In addition, the following intermediate results are saved for a given model class:
+            1. Confusion Matrix with default threshold (0.5) image
+            2. Classification Report heatmap with default threshold (0.5) image
+            3. Discrimination Threshold image
+            4. Learning Curve image
+            5. Shap Feature Importances (barplot image)
+            6. Shap Summary Plot (beeswarm plot image)
+            
+            Output: None
+
+            Parameters:
+            - obj: Optuna objective function
+            - clf: Model object
+            - input_data: Features from dataset
+            - output_data: Target column from dataset
+            - n_trials: Number of trials for Optuna hyperparameter tuning
+            - continuous_columns: List of continuous variable names
+            - continuous_index: List of continuous variable index
+            - categorical_columns: List of categorical variable names
+            - categorical_index: List of categorical variable index
+        '''
         self.log_writer.log(
             self.file_object, f"Start final model training on all data for {type(clf).__name__}")
-        model = clone(clf)
-        if type(model).__name__ in ['DecisionTreeClassifier', 'RandomForestClassifier','ExtraTreesClassifier','GradientBoostingClassifier']:
-            temp_pipeline = Pipeline(steps=[], memory='Caching')
-            model_trainer.pipeline_missing_step(
-                temp_pipeline, continuous_columns, continuous_index)
-            input_train_data_copy = temp_pipeline.steps[0][1].fit_transform(input_data,output_data)
-            temp_clf = DecisionTreeClassifier(random_state=random_state)
-            path = temp_clf.cost_complexity_pruning_path(input_train_data_copy, output_data)
-            func = lambda trial: obj(
-                trial, input_data, output_data, continuous_columns, continuous_index, categorical_columns, categorical_index, path)
-        else:
-            func = lambda trial: obj(
-                trial, input_data, output_data, continuous_columns, continuous_index, categorical_columns, categorical_index)
-        func.__name__ = type(model).__name__
-        self.log_writer.log(
-            self.file_object, f"Start hyperparameter tuning for {type(model).__name__}")
-        best_trial = self.optuna_optimizer(
-            func,n_trials, self.folderpath, 'overall')
-        self.log_writer.log(
-            self.file_object, f"Hyperparameter tuning for {type(model).__name__} completed") 
-        best_pipeline = best_trial.user_attrs['Pipeline']
-        input_data_transformed = best_pipeline.fit_transform(
-            input_data, output_data)
+        overall_model, best_trial, input_data_transformed, output_data_transformed, best_pipeline = self.model_training(clf, obj, continuous_columns, continuous_index, categorical_columns, categorical_index, input_data, output_data, n_trials, 'overall')
         joblib.dump(best_pipeline,'Saved_Models/Preprocessing_Pipeline.pkl')
-        if 'smote' in best_pipeline.named_steps.keys():
-            output_data_transformed = best_pipeline.steps[1][1].fit_resample(best_pipeline.steps[0][1].fit_transform(input_data,output_data),output_data)[1]
-        else:
-            output_data_transformed = output_data
-        for parameter in ['missing','balancing','outlier','scaling','feature_selection','number_features','drop_correlated','drop_correlated_missing','feature_selection_missing','damping','cluster_indicator']:
-            if parameter in best_trial.params.keys():
-                best_trial.params.pop(parameter)
-        for weight_param in ['class_weight','auto_class_weights']:
-            if weight_param in best_trial.params.keys():
-                if best_trial.params[weight_param] == 'None':
-                    best_trial.params.pop(weight_param)
-        overall_model = clone(clf)
-        overall_model = overall_model.set_params(**best_trial.params)
-        overall_model.fit(
-            input_data_transformed,output_data_transformed['Output'])
         joblib.dump(overall_model,'Saved_Models/FinalModel.pkl')
         actual_labels = output_data_transformed['Output']
         pred_labels = overall_model.predict(input_data_transformed)
-        cmd = ConfusionMatrixDisplay.from_predictions(
-            actual_labels, pred_labels)
-        cmd.ax_.set_title(
-            f"{type(clf).__name__} Confusion Matrix (Threshold: 0.5) - Final Model")
-        plt.grid(False)
-        cmd.figure_.savefig(
-            self.folderpath+type(clf).__name__+f'/Confusion_Matrix_{type(clf).__name__}_Default_Threshold_Final_Model.png')
-        plt.clf()
-        clf_report = classification_report(
-            actual_labels,pred_labels,target_names=['0','1'],output_dict=True,digits=4)
-        fig = plt.figure()
-        sns.heatmap(
-            pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, fmt=".4f")
-        plt.title(
-            f"{type(clf).__name__} Classification Report (Threshold: 0.5) - Final Model")
-        fig.savefig(
-            self.folderpath+type(clf).__name__+f'/Classification_Report_{type(clf).__name__}_Default_Threshold_Final_Model.png')
-        plt.clf()
-        visualizer = DiscriminationThreshold(
-            overall_model, random_state=random_state, cv= StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state))
-        visualizer.fit(input_data_transformed,output_data_transformed['Output'])
-        visualizer.show(outpath=self.folderpath+type(clf).__name__+f'/Binary_Threshold_{type(clf).__name__}.png',clear_figure=True)
-        joblib.dump(visualizer, 'Saved_Models/Binary_Threshold.pkl')
-        visualizer = LearningCurve(
-            overall_model, cv= StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state), scoring='f1', train_sizes=np.linspace(0.3, 1.0, 10))
-        visualizer.fit(input_data_transformed,output_data_transformed['Output'])
-        visualizer.show(
-            outpath=self.folderpath+type(clf).__name__+f'/LearningCurve_{type(clf).__name__}.png',clear_figure=True)
-        if type(overall_model).__name__ in ['LogisticRegression','LinearSVC']:
-            explainer = shap.LinearExplainer(overall_model, input_data_transformed)
-            explainer_obj = explainer(input_data_transformed)
-            shap_values = explainer.shap_values(input_data_transformed)
-        else:
-            explainer = shap.TreeExplainer(overall_model)
-            explainer_obj = explainer(input_data_transformed)[:,:,1]
-            shap_values = explainer.shap_values(input_data_transformed)[1]
-        plt.figure()
-        shap.summary_plot(shap_values, input_data_transformed, plot_type="bar", show=False, max_display=40)
-        plt.title(f'Shap Feature Importances for {type(clf).__name__}')
-        plt.savefig(
-            self.folderpath+type(clf).__name__+f'/Shap_Feature_Importances_{type(clf).__name__}.png',bbox_inches='tight')
-        plt.clf()
-        plt.figure()
-        shap.plots.beeswarm(explainer_obj, show=False, max_display=40)
-        plt.title(f'Shap Summary Plot for {type(clf).__name__}')
-        plt.savefig(
-            self.folderpath+type(clf).__name__+f'/Shap_Summary_Plot_{type(clf).__name__}.png',bbox_inches='tight')
-        plt.clf()
+        self.confusion_matrix_plot(
+            clf, 'Confusion Matrix (Threshold: 0.5) - Final Model', 'Default_Threshold_Final_Model', actual_labels, pred_labels)
+        self.classification_report_plot(
+            clf, 'Classification Report (Threshold: 0.5) - Final Model', 'Default_Threshold_Final_Model', actual_labels, pred_labels)
+        self.binary_threshold_plot(
+            overall_model, input_data_transformed, output_data_transformed['Output'])
+        self.learning_curve_plot(
+            overall_model, input_data_transformed, output_data_transformed['Output'])
+        self.shap_plot(overall_model, input_data_transformed)
         self.log_writer.log(
             self.file_object, f"Finish final model training on all data for {type(clf).__name__}")
         
 
-    def model_selection(self, input, output, folderpath):
+    def model_selection(self, input, output, num_trials, folderpath):
         '''
             Method Name: model_selection
-            Description: This method performs model algorithm selection using Stratifie Nested Cross Validation (5-fold cv outer loop for model evaluation and 3-fold cv inner loop for hyperparameter tuning)
+            Description: This method performs model algorithm selection using Stratified Nested Cross Validation (5-fold cv outer loop for model evaluation and 3-fold cv inner loop for hyperparameter tuning)
             Output: None
+
+            Parameters:
+            - input: Features from dataset
+            - output: Target column from dataset
+            - num_trials: Number of Optuna trials for hyperparameter tuning
+            - folderpath: String path name where all results generated from model training are stored.
         '''
         self.log_writer.log(
             self.file_object, 'Start process of model selection')
         self.input = input
         self.output = output
+        self.num_trials = num_trials
         self.folderpath = folderpath
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
         continuous_columns = [col for col in self.input.columns if col.find('_') == -1]
@@ -946,7 +1209,7 @@ class model_trainer:
             if not os.path.exists(path):
                 os.mkdir(path)
             self.hyperparameter_tuning(
-                obj, clf, 20, input_data, output_data, continuous_columns, continuous_index, categorical_columns, categorical_index)
+                obj = obj, clf = clf, n_trials = self.num_trials, input_data = input_data, output_data = output_data, continuous_columns = continuous_columns, continuous_index = continuous_index, categorical_columns = categorical_columns, categorical_index = categorical_index)
             time.sleep(10)
         overall_results = pd.read_csv(
             self.folderpath + 'Overall_Model_Performance_Results.csv')
@@ -966,9 +1229,22 @@ class model_trainer:
             self.file_object, 'Finish process of model selection')
 
 
-    def final_model_tuning(self, input_data, output_data, folderpath):
+    def final_model_tuning(
+            self, input_data, output_data, num_trials, folderpath):
+        '''
+            Method Name: final_model_tuning
+            Description: This method performs final model training from best model algorithm identified on entire dataset using Stratified 3-fold cross validation.
+            Output: None
+
+            Parameters:
+            - input_data: Features from dataset
+            - output_data: Target column from dataset
+            - num_trials: Number of Optuna trials for hyperparameter tuning
+            - folderpath: String path name where all results generated from model training are stored.
+        '''
         self.input_data = input_data
         self.output_data = output_data
+        self.num_trials = num_trials
         self.folderpath = folderpath
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
         try:
@@ -990,7 +1266,8 @@ class model_trainer:
             model_options = {1: 'LogisticRegression', 2: 'LinearSVC', 3: 'KNeighborsClassifier', 4: 'GaussianNB', 5: 'DecisionTreeClassifier', 6: 'RandomForestClassifier', 7: 'ExtraTreesClassifier', 8: 'AdaBoostClassifier', 9: 'GradientBoostingClassifier', 10: 'XGBClassifier', 11: 'LGBMClassifier', 12: 'CatBoostClassifier'}
             best_model_name = model_options[model_number]
         except:
-            print('Please insert a valid number of choice for model deployment.')
+            print(
+                'Please insert a valid number of choice for model deployment.')
             return
         self.log_writer.log(
             self.file_object, f"Start performing hyperparameter tuning on best model identified overall: {best_model_name}")
@@ -1003,7 +1280,7 @@ class model_trainer:
         input_data = self.input_data.copy()
         output_data = self.output_data.copy()
         self.final_overall_model(
-            obj, clf, input_data, output_data, 20, continuous_columns, continuous_index, categorical_columns, categorical_index)
+            obj = obj, clf = clf, input_data = input_data, output_data = output_data, n_trials = self.num_trials, continuous_columns = continuous_columns, continuous_index = continuous_index, categorical_columns = categorical_columns, categorical_index = categorical_index)
         self.log_writer.log(
             self.file_object, f"Finish performing hyperparameter tuning on best model identified overall: {best_model_name}")
 
@@ -1012,10 +1289,23 @@ class CheckGaussian():
     
 
     def __init__(self):
+        '''
+            Method Name: __init__
+            Description: This method initializes instance of CheckGaussian class
+            Output: None
+        '''
         pass
 
 
     def check_gaussian(self, X):
+        '''
+            Method Name: check_gaussian
+            Description: This method classifies features from dataset into gaussian vs non-gaussian columns.
+            Output: self
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X, columns = self.continuous)
         self.gaussian_columns = []
         self.non_gaussian_columns = []
@@ -1032,11 +1322,27 @@ class MissingTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
     
     def __init__(self, continuous):
+        '''
+            Method Name: __init__
+            Description: This method initializes instance of MissingTransformer class
+            Output: None
+
+            Parameters:
+            - continuous: Continuous features from dataset
+        '''
         super(MissingTransformer, self).__init__()
         self.continuous = continuous
     
 
     def fit(self, X, y=None):
+        '''
+            Method Name: fit
+            Description: This method classifies way of handling missing data, while fitting respective class methods from feature-engine.imputation library
+            Output: self
+
+            Parameters:
+            - X: Features from dataset
+        '''
         self.mean_imputed_column = []
         self.median_imputed_column = [] 
         self.endtail_iqr_imputed_column = []
@@ -1071,6 +1377,14 @@ class MissingTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
 
 
     def transform(self, X, y=None):
+        '''
+            Method Name: transform
+            Description: This method performs transformation on features using respective class methods from feature-engine.imputation library
+            Output: Transformed features from dataset in dataframe format.
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = X.copy()
         if self.mean_imputed_column != []:
             X_ = self.meanimputer.transform(X_)
@@ -1093,11 +1407,27 @@ class OutlierCapTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
     
     def __init__(self, continuous):
+        '''
+            Method Name: __init__
+            Description: This method initializes instance of MissingTransformer class
+            Output: None
+
+            Parameters:
+            - continuous: Continuous features from dataset
+        '''
         super(OutlierCapTransformer, self).__init__()
         self.continuous = continuous
 
 
     def fit(self, X, y=None):
+        '''
+            Method Name: fit
+            Description: This method classifies way of handling outliers based on whether features are gaussian or non-gaussian, while fitting respective class methods from feature-engine.outliers library
+            Output: self
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous)
         self.check_gaussian(X_[self.continuous])
         if self.non_gaussian_columns!=[]:
@@ -1112,6 +1442,14 @@ class OutlierCapTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
 
     def transform(self, X, y=None):
+        '''
+            Method Name: transform
+            Description: This method performs transformation on features using respective class methods from feature-engine.outliers library
+            Output: Transformed features from dataset in dataframe format.
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous)
         if self.non_gaussian_columns != []:
             X_ = self.non_gaussian_winsorizer.transform(X_)
@@ -1124,11 +1462,27 @@ class GaussianTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
     
     def __init__(self, continuous):
+        '''
+            Method Name: __init__
+            Description: This method initializes instance of GaussianTransformer class
+            Output: None
+
+            Parameters:
+            - continuous: Continuous features from dataset
+        '''
         super(GaussianTransformer, self).__init__()
         self.continuous = continuous
 
 
     def fit(self, X, y=None):
+        '''
+            Method Name: fit
+            Description: This method tests for various gaussian transformation techniques on non-gaussian variables. Non-gaussian variables that best successfully transformed to gaussian variables based on Anderson test will be used for fitting on respective gaussian transformers.
+            Output: self
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous)
         self.check_gaussian(X_[self.continuous])
         transformer_list = [
@@ -1183,6 +1537,14 @@ class GaussianTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
 
     def transform(self, X, y=None):
+        '''
+            Method Name: transform
+            Description: This method performs gaussian transformation on features using respective gaussian transformers.
+            Output: Transformed features from dataset in dataframe format.
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous)
         if hasattr(self, 'logtransformer'):
             try:
@@ -1225,12 +1587,29 @@ class ScalingTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
     
     def __init__(self, scaler, continuous):
+        '''
+            Method Name: __init__
+            Description: This method initializes instance of ScalingTransformer class
+            Output: None
+
+            Parameters:
+            - scaler: String that represents method of performing feature scaling. (Accepted values are 'Standard', 'MinMax', 'Robust' and 'Combine')
+            - continuous: Continuous features from dataset
+        '''
         super(ScalingTransformer, self).__init__()
         self.scaler = scaler
         self.continuous = continuous
 
 
     def fit(self, X, y=None):
+        '''
+            Method Name: fit
+            Description: This method fits dataset onto respective scalers selected.
+            Output: self
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous)
         if self.scaler == 'Standard':
             self.copyscaler = StandardScaler()
@@ -1250,6 +1629,14 @@ class ScalingTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     
 
     def transform(self, X, y=None):
+        '''
+            Method Name: transform
+            Description: This method performs transformation on features using respective scalers.
+            Output: Transformed features from dataset in dataframe format.
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous)
         if self.scaler != 'Combine':
             X_ = pd.DataFrame(
@@ -1266,6 +1653,23 @@ class FeatureSelectionTransformer(BaseEstimator, TransformerMixin):
     
     def __init__(
             self, method, drop_correlated, continuous, categorical, model, scaling_indicator= 'no', cluster_indicator= 'no', damping = None, number=None):
+        '''
+            Method Name: __init__
+            Description: This method initializes instance of MissingTransformer class
+            Output: None
+
+            Parameters:
+            - method: String that represents method of feature selection (Accepted values are 'BorutaShap', 'Lasso', 'FeatureImportance_ET', 'FeatureImportance_self', 'MutualInformation', 'ANOVA', 'FeatureWiz')
+            - drop_correlated: String indicator of dropping highly correlated features (yes or no)
+            - continuous: Continuous features from dataset
+            - categorical: Categorical features from dataset
+            - model: Model object
+            - scaling_indicator: String that represents method of performing feature scaling. (Accepted values are 'Standard', 'MinMax', 'Robust', 'Combine' and 'no'). Default value is 'no'
+            - cluster_indicator: String indicator of including cluster-related feature (yes or no). Default value is 'no'
+            - damping: Float value (range from 0.5 to 1 not inclusive) as an additional hyperparameter for Affinity Propagation clustering algorithm. Default value is None.
+            - number: Integer that represents number of features to select. Minimum value required is 1. Default value is None.
+
+        '''
         self.method = method
         self.drop_correlated = drop_correlated
         self.continuous = continuous
@@ -1278,6 +1682,14 @@ class FeatureSelectionTransformer(BaseEstimator, TransformerMixin):
 
 
     def fit(self, X, y=None):
+        '''
+            Method Name: fit
+            Description: This method finds list of correlated features if drop_correlated indicator is 'yes', identifies subset of columns from respective feature selection techniques and fits clustering from features using Affinity Propagation if clustering indicator is 'yes'.
+            Output: self
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous + self.categorical)
         y = y.reset_index(drop=True)
         if self.drop_correlated == 'yes':
@@ -1359,6 +1771,14 @@ class FeatureSelectionTransformer(BaseEstimator, TransformerMixin):
     
 
     def transform(self, X, y=None):
+        '''
+            Method Name: transform
+            Description: This method extracts non-correlated columns if drop correlated indicator is "yes", followed by subset of columns identified from feature selection and add additional feature named "cluster_distance" if cluster inndicator is "yes" 
+            Output: Transformed features from dataset in dataframe format.
+
+            Parameters:
+            - X: Features from dataset
+        '''
         X_ = pd.DataFrame(X.copy(), columns = self.continuous + self.categorical)
         if self.drop_correlated == 'yes':
             X_ = self.correlated_selector.transform(X_)

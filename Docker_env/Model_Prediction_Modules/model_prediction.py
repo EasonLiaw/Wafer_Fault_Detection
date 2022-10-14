@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 11th October 2022
+Last Modified: 14th October 2022
 '''
 
 import pandas as pd
@@ -14,25 +14,33 @@ class model_predictor:
             Method Name: __init__
             Description: This method initializes instance of model_predictor class
             Output: None
+
+            Parameters:
+            - file_object: String path of logging text file
         '''
         self.file_object = file_object
         self.log_writer = App_Logger()
 
     
-    def model_prediction(self, data, model, pipeline):
+    def model_prediction(self, datapath, model, pipeline):
         '''
             Method Name: model_prediction
             Description: This method performs all the model prediction tasks for the data.
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
+            - model: Model object
+            - pipeline: Imblearn pipeline object
         '''
         self.log_writer.log(
             self.file_object, 'Start performing model prediction using best model identified on given data batch.')
-        self.data = data
+        self.datapath = datapath
         self.model = model
         self.pipeline = pipeline
         try:
-            pred_data = pd.read_csv(self.data)
+            pred_data = pd.read_csv(self.datapath)
             index = pred_data['Wafer']
             pred_data.drop('Wafer',axis=1, inplace=True)
             sub_pred_data = self.pipeline.transform(pred_data)

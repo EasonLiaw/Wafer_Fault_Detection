@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 11th October 2022
+Last Modified: 13th October 2022
 '''
 
 import warnings
@@ -21,17 +21,24 @@ from tqdm import tqdm
 random_state=120
 
 class train_Preprocessor:
+
+
     def __init__(self, file_object, result_dir):
         '''
             Method Name: __init__
             Description: This method initializes instance of train_Preprocessor class
             Output: None
+
+            Parameters:
+            - file_object: String path of logging text file
+            - result_dir: String path for storing intermediate results from running this class
         '''
         self.file_object = file_object
         self.result_dir = result_dir
         self.log_writer = App_Logger()
 
-    def extract_compiled_data(self, path):
+
+    def extract_compiled_data(self):
         '''
             Method Name: extract_compiled_data
             Description: This method extracts data from a csv file and converts it into a pandas dataframe.
@@ -40,9 +47,8 @@ class train_Preprocessor:
         '''
         self.log_writer.log(
             self.file_object, "Start reading compiled data from database")
-        self.path = path
         try:
-            data = pd.read_csv(path)
+            data = pd.read_csv(self.data_path)
         except Exception as e:
             self.log_writer.log(
                 self.file_object, f"Fail to read compiled data from database with the following error: {e}")
@@ -52,21 +58,24 @@ class train_Preprocessor:
             self.file_object, "Finish reading compiled data from database")
         return data
 
-    def remove_irrelevant_columns(self, data, column):
+
+    def remove_irrelevant_columns(self, data):
         '''
             Method Name: remove_irrelevant_columns
             Description: This method removes columns from a pandas dataframe, which are not relevant for analysis.
-            Output: A pandas DataFrame after removing the specified columns. In addition, columns that are removed will be stored in a separate csv file labeled "Columns_Drop_from_Original.csv"
+            Output: A pandas DataFrame after removing the specified columns. In addition, columns that are removed will be stored in a separate csv file.
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
         '''
         self.log_writer.log(
             self.file_object, "Start removing irrelevant columns from the dataset")
         try:
-            data = data.drop(column, axis=1)
+            data = data.drop(self.index_col, axis=1)
             result = pd.concat(
-                [pd.Series(column, name='Columns_Removed'), pd.Series(["Irrelevant column"]*len([column]), name='Reason')], axis=1)
-            result.to_csv(
-                self.result_dir+'Columns_Drop_from_Original.csv', index=False)
+                [pd.Series(self.index_col, name='Columns_Removed'), pd.Series(["Irrelevant column"]*len([self.index_col]), name='Reason')], axis=1)
+            result.to_csv(self.result_dir+self.col_drop_path, index=False)
         except Exception as e:
             self.log_writer.log(
                 self.file_object, f"Irrelevant columns could not be removed from the dataset with the following error: {e}")
@@ -76,12 +85,16 @@ class train_Preprocessor:
             self.file_object, "Finish removing irrelevant columns from the dataset")
         return data
 
+
     def remove_duplicated_rows(self, data):
         '''
             Method Name: remove_duplicated_rows
             Description: This method removes duplicated rows from a pandas dataframe.
             Output: A pandas DataFrame after removing duplicated rows. In addition, duplicated records that are removed will be stored in a separate csv file labeled "Duplicated_Records_Removed.csv"
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
         '''
         self.log_writer.log(
             self.file_object, "Start handling duplicated rows in the dataset")
@@ -102,18 +115,22 @@ class train_Preprocessor:
             self.file_object, "Finish handling duplicated rows in the dataset")
         return data
     
-    def features_and_labels(self,data,column):
+
+    def features_and_labels(self,data):
         '''
             Method Name: features_and_labels
             Description: This method splits a pandas dataframe into two pandas objects, consist of features and target labels.
             Output: Two pandas/series objects consist of features and labels separately.
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
         '''
         self.log_writer.log(
             self.file_object, "Start separating the data into features and labels")
         try:
-            X = data.drop(column, axis=1)
-            y = data[column]
+            X = data.drop(self.target_col, axis=1)
+            y = data[self.target_col]
         except Exception as e:
             self.log_writer.log(
                 self.file_object, f"Fail to separate features and labels with the following error: {e}")
@@ -123,21 +140,27 @@ class train_Preprocessor:
             self.file_object, "Finish separating the data into features and labels")
         return X, y
     
-    def handling_large_zeros(self, X, continuous_columns, threshold):
+
+    def handling_large_zeros(self, data, continuous_columns, threshold):
         '''
             Method Name: handling_large_zeros
             Description: This method adds columns (binary indicator) for features that have proportion of zero values exceeding a given threshold.
             Output: A pandas dataframe, where zero value indicator was included for variables with values of zeros.
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
+            - continuous_columns: List of continuous columns
+            - threshold: Value set for proportion of zero values
         '''
         self.log_writer.log(
             self.file_object, "Start checking and handling variables with zero values")
         try:
             cols_with_large_zeros = []
             for col in continuous_columns:
-                if (X[col] == 0).sum() > threshold*len(X):
+                if (data[col] == 0).sum() > threshold*len(data):
                     cols_with_large_zeros.append(col)
-                    X[col+"_zero"] = np.where(X[col]==0, 1, 0)
+                    data[col+"_zero"] = np.where(data[col]==0, 1, 0)
             joblib.dump(
                 cols_with_large_zeros, self.result_dir+"ZeroIndicator.pkl")
         except Exception as e:
@@ -147,21 +170,24 @@ class train_Preprocessor:
                 f"Fail to check and handle variables with zero values with the following error: {e}")
         self.log_writer.log(
             self.file_object, "Finish checking and handling variables with zero values")
-        return X
+        return data
 
 
-    def add_missing_indicator(self, X):
+    def add_missing_indicator(self, data):
         '''
             Method Name: add_missing_indicator
             Description: This method adds missing indicator to variables that contain missing values
             Output: A pandas dataframe, where missing indicator was included for variables with missing values.
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
         '''
         self.log_writer.log(
             self.file_object, f"Start adding missing indicator for features with missing values")
         try:
             selector = fei.AddMissingIndicator()
-            X = selector.fit_transform(X)
+            data = selector.fit_transform(data)
             joblib.dump(
                 selector,open(self.result_dir + f'AddMissingIndicator.pkl','wb'))
             self.log_writer.log(
@@ -173,26 +199,32 @@ class train_Preprocessor:
                 f"Fail to add missing indicator for features with missing values with the following error: {e}")
         self.log_writer.log(
             self.file_object, f"Finish adding missing indicator for features with missing values")
-        return X
+        return data
 
-    def drop_constant_variance(self, X, filename, threshold):
+
+    def drop_constant_variance(self, data, threshold):
         '''
             Method Name: drop_constant_variance
             Description: This method removes variables that have constant variance from the dataset.
-            Output: A pandas dataframe, where variables with constant variance are removed.  In addition, variables that were removed due to constant variance are stored in a csv file named as "Columns_Drop_from_Original.csv"
+            Output: A pandas dataframe, where variables with constant variance are removed.  In addition, variables that were removed due to constant variance are stored in a csv file.
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - data: Dataframe object
+            - threshold: Value set for detecting constant features
         '''
         self.log_writer.log(
             self.file_object, f"Start removing features with constant variance")
         try:
             selector = fes.DropConstantFeatures(
                 missing_values='ignore',tol=threshold)
-            X = selector.fit_transform(X)
-            joblib.dump(selector,open(self.result_dir + f'Dropconstantfeatures.pkl','wb'))
+            data = selector.fit_transform(data)
+            joblib.dump(
+                selector,open(self.result_dir + f'Dropconstantfeatures.pkl','wb'))
             result = pd.concat(
                 [pd.Series(selector.features_to_drop_, name='Columns_Removed'), pd.Series(["Constant variance"]*len(selector.features_to_drop_), name='Reason')], axis=1)
             result.to_csv(
-                self.result_dir + filename, index=False, mode='a+', header=False)
+                self.result_dir + self.col_drop_path, index=False, mode='a+', header=False)
             self.log_writer.log(
                 self.file_object, f"Following set of features were removed due to having constant variance: {selector.features_to_drop_}")
         except Exception as e:
@@ -202,7 +234,7 @@ class train_Preprocessor:
                 f"Fail to remove features with constant variance with the following error: {e}")
         self.log_writer.log(
             self.file_object, f"Finish removing features with constant variance")
-        return X
+        return data
 
 
     def eda(self, data_path, target_col):
@@ -210,23 +242,25 @@ class train_Preprocessor:
             Method Name: eda
             Description: This method performs exploratory data analysis on the entire dataset, while generating various plots/csv files for reference.
             Output: None
+            Parameters:
+            - data_path: String path where data compiled from database is located
+            - target_col: Name of column related to target variable
         '''
         self.log_writer.log(
             self.file_object, 'Start performing exploratory data analysis')
-        self.data_path = data_path
-        self.target_col = target_col
         path = os.path.join(self.result_dir, 'EDA')
         if not os.path.exists(path):
             os.mkdir(path)
         scat_path = os.path.join(path, 'High_Correlation_Scatterplots')
         if not os.path.exists(scat_path):
             os.mkdir(scat_path)
-        data = self.extract_compiled_data(self.data_path)
+        data = self.extract_compiled_data(data_path = data_path)
         # Extract basic information about dataset
         pd.DataFrame({"name": data.columns, "non-nulls": len(data)-data.isnull().sum().values, "type": data.dtypes.values}).to_csv(self.result_dir + "EDA/Data_Info.csv",index=False)
         # Extract summary statistics about dataset
-        data.describe().T.to_csv(self.result_dir + "EDA/Data_Summary_Statistics.csv")
-        X, y = self.features_and_labels(data, self.target_col)
+        data.describe().T.to_csv(
+            self.result_dir + "EDA/Data_Summary_Statistics.csv")
+        X, y = self.features_and_labels(data, target_col)
         # Plotting proportion of null values and zero values of dataset
         zero_prop = []
         null_prop = []
@@ -267,7 +301,7 @@ class train_Preprocessor:
                 os.mkdir(col_path)
             # Plotting boxplot of features based on target variable
             fig = px.box(
-                data,y=col,x=self.target_col,title=f"{col} Boxplot by Class")
+                data,y=col,x=target_col,title=f"{col} Boxplot by Class")
             fig.write_image(
                 self.result_dir + f"EDA/{col}/{col}_Boxplot_By_Class.png")
             # Plotting boxplot of features
@@ -287,13 +321,13 @@ class train_Preprocessor:
             if X[col].isnull().mean() != 0:
                 # Plotting histogram of number of missing values of features by target class
                 fig4 = px.histogram(
-                    data,x=X[col].isnull(),color=self.target_col,title=f"{col} Number of Missing Values by Class",text_auto=True)
+                    data,x=X[col].isnull(),color=target_col,title=f"{col} Number of Missing Values by Class",text_auto=True)
                 fig4.write_image(
                     self.result_dir + f"EDA/{col}/{col}_Count_Missing_By_Class.png")
             if (X[col] == 0).sum() !=0:
                 # Plotting histogram of number of zero values of features by target class
                 fig5 = px.histogram(
-                    data,x=(X[col]==0),color=self.target_col,title=f"{col} Number of Zero Values by Class",text_auto=True)
+                    data,x=(X[col]==0),color=target_col,title=f"{col} Number of Zero Values by Class",text_auto=True)
                 fig5.write_image(
                     self.result_dir + f"EDA/{col}/{col}_Count_Zeros_By_Class.png")
         # Plotting target class distribution
@@ -314,27 +348,35 @@ class train_Preprocessor:
         self.log_writer.log(
             self.file_object, 'Finish performing exploratory data analysis')
 
+
     def data_preprocessing(
             self, data_path, col_drop_path, index_col, target_col):
         '''
             Method Name: data_preprocessing
             Description: This method performs all the data preprocessing tasks for the data.
             Output: None
+            
+            Parameters:
+            - data_path: String path where data compiled from database is located
+            - col_drop_path: String path that stores list of columns that are removed from the data
+            - index_col: Name of column related to unique IDs
+            - target_col: Name of column related to target variable
         '''
         self.log_writer.log(self.file_object, 'Start of data preprocessing')
         self.data_path = data_path
         self.col_drop_path = col_drop_path
         self.index_col = index_col
         self.target_col = target_col
-        data = self.extract_compiled_data(self.data_path)
-        data = self.remove_irrelevant_columns(data, self.index_col)
-        data = self.remove_duplicated_rows(data)
-        X, y = self.features_and_labels(data, self.target_col)
+        data = self.extract_compiled_data()
+        data = self.remove_irrelevant_columns(data = data)
+        data = self.remove_duplicated_rows(data = data)
+        X, y = self.features_and_labels(data = data)
         y = y.replace(-1,0)
         continuous_columns = X._get_numeric_data().columns.tolist()
-        X = self.add_missing_indicator(X)
-        X = self.handling_large_zeros(X, continuous_columns, 0.01)
-        X= self.drop_constant_variance(X, self.col_drop_path, 0.98)
+        X = self.add_missing_indicator(data = X)
+        X = self.handling_large_zeros(
+            data = X, continuous_columns = continuous_columns, threshold = 0.01)
+        X= self.drop_constant_variance(data = X, threshold = 0.98)
         X.to_csv(self.result_dir+'X.csv',index=False)
         y.to_csv(self.result_dir+'y.csv',index=False)
         self.log_writer.log(self.file_object, 'End of data preprocessing')

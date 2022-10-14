@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 11th October 2022
+Last Modified: 14th October 2022
 '''
 
 import os, shutil, json
@@ -18,6 +18,10 @@ class DBOperations:
             Method Name: __init__
             Description: This method initializes instance of DBOperations class
             Output: None
+
+            Parameters:
+            - tablename: String name of table to create in a given database
+            - file_object: String path of logging text file
         '''
         self.tablename = tablename
         self.file_object = file_object
@@ -34,17 +38,19 @@ class DBOperations:
             Description: This method creates a new database and table in MySQL database based on a given schema file object.
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - schema: JSON object file related to schema database
         '''
         self.log_writer.log(
             self.file_object, f"Start creating new table({self.tablename}) in SQL database ({self.dbname})")
-        self.schema = schema
         try:
             conn = mysql.connector.connect(
                 host=self.host,user=self.user,password=self.password,database=self.dbname)
             mycursor = conn.cursor()
-            for name, type in zip(self.schema['ColName'].keys(),self.schema['ColName'].values()):
+            for name, type in zip(schema['ColName'].keys(),schema['ColName'].values()):
                 mycursor.execute(
-                    f"""SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{self.tablename}'""")
+                    f"""SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{self.tablename}' AND table_schema = '{self.dbname}'""")
                 if mycursor.fetchone()[0] == 1:
                     try:
                         mycursor.execute(
@@ -83,16 +89,18 @@ class DBOperations:
             Description: This method inserts data from existing csv file into MySQL database
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - gooddir: String path where good data quality files are located
         '''
         self.log_writer.log(
             self.file_object, "Start inserting new good prediction data into SQL database")
-        self.gooddir = gooddir
         try:
             conn = mysql.connector.connect(
                 host=self.host,user=self.user,password=self.password,database = self.dbname)
             mycursor = conn.cursor()
-            for file in os.listdir(self.gooddir[:-1]):
-                with open(self.gooddir+file, "r") as f:
+            for file in os.listdir(gooddir[:-1]):
+                with open(gooddir+file, "r") as f:
                     next(f)
                     filename = csv.reader(f)
                     for line in enumerate(filename):
@@ -126,16 +134,18 @@ class DBOperations:
             Description: This method compiles data from MySQL table into csv file for further data preprocessing.
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - compiledir: String path where good quality data is compiled from database
         '''
         self.log_writer.log(
             self.file_object, "Start writing compiled good prediction data into a new CSV file")
-        self.compiledir = compiledir
         try:
             conn = mysql.connector.connect(
                 host=self.host,user=self.user,password=self.password,database = self.dbname)
             data = pd.read_sql(
                 f'''SELECT DISTINCT * FROM {self.tablename};''', conn)
-            data.to_csv(self.compiledir, index=False)
+            data.to_csv(compiledir, index=False)
         except ConnectionError:
             self.log_writer.log(
                 self.file_object, "Error connecting to SQL database")
@@ -160,6 +170,12 @@ class rawpreddatavalidation(DBOperations):
             from DBOperations class
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - tablename: String name of table to create in a given database
+            - file_object: String path of logging text file
+            - gooddir: String path where good data quality files are located
+            - baddir: String path where bad data quality files are located
         '''
         super().__init__(tablename, file_object)
         self.gooddir = gooddir
@@ -167,7 +183,7 @@ class rawpreddatavalidation(DBOperations):
         self.log_writer = App_Logger()
 
 
-    def load_pred_schema(self, filename):
+    def load_pred_schema(self):
         '''
             Method Name: load_pred_schema
             Description: This method loads the schema of the prediction data from a given JSON file for creating tables in MySQL database.
@@ -175,9 +191,8 @@ class rawpreddatavalidation(DBOperations):
             On Failure: Logging error and raise exception
         '''
         self.log_writer.log(self.file_object, "Start loading prediction schema")
-        self.filename = filename
         try:
-            with open(filename, 'r') as f:
+            with open(self.schemapath, 'r') as f:
                 schema = json.load(f)
         except Exception as e:
             self.log_writer.log(
@@ -189,7 +204,7 @@ class rawpreddatavalidation(DBOperations):
         return schema
     
 
-    def file_initialize(self, filelist):
+    def file_initialize(self):
         '''
             Method Name: file_initialize
             Description: This method creates the list of folders mentioned in the filelist if not exist. If exist, this method deletes the existing folders and creates new ones. Note that manual archiving will be required if backup of existing files is required.
@@ -198,8 +213,7 @@ class rawpreddatavalidation(DBOperations):
         '''
         self.log_writer.log(
             self.file_object, "Start initializing folder structure")
-        self.filelist = filelist
-        for folder in self.filelist:
+        for folder in self.folders:
             try:
                 if os.path.exists(folder):
                     shutil.rmtree(folder)
@@ -215,22 +229,24 @@ class rawpreddatavalidation(DBOperations):
             self.file_object, "Finish initializing folder structure")
     
 
-    def file_namecheck(self,sourcedir,schema):
+    def file_namecheck(self,schema):
         '''
             Method Name: file_namecheck
             Description: This method checks for the validity of file names of CSV files. If the CSV file does not follow specified name format, the CSV file is moved to bad data folder.
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - schema: JSON object file related to schema database
         '''
         self.log_writer.log(
             self.file_object, "Start checking for valid name of files")
-        self.sourcedir = sourcedir
-        self.schema = schema
-        for file in os.listdir(self.sourcedir):
+        for file in os.listdir(self.batchfilepath):
             filename = file.split(".csv")[0].split('_')
-            if len(filename)!=3 or filename[0] != 'wafer' or len(filename[1])!=self.schema['LengthOfDateStampInFile'] or len(filename[2])!=self.schema['LengthOfTimeStampInFile']:
+            if len(filename)!=3 or filename[0] != 'wafer' or len(filename[1])!=schema['LengthOfDateStampInFile'] or len(filename[2])!=schema['LengthOfTimeStampInFile']:
                 try:
-                    shutil.copyfile(self.sourcedir+"/"+file, self.baddir+file)
+                    shutil.copyfile(
+                        self.batchfilepath+"/"+file, self.baddir+file)
                     self.log_writer.log(
                         self.file_object, f"{file} moved to bad data folder due to invalid file name")
                 except Exception as e:
@@ -240,7 +256,8 @@ class rawpreddatavalidation(DBOperations):
                         f"{file} could not be moved to bad data folder with the following error: {e}")
             else:
                 try:
-                    shutil.copyfile(self.sourcedir+"/"+file, self.gooddir+file)
+                    shutil.copyfile(
+                        self.batchfilepath+"/"+file, self.gooddir+file)
                     self.log_writer.log(
                         self.file_object, f"{file} moved to good data folder")
                 except Exception as e:
@@ -258,10 +275,12 @@ class rawpreddatavalidation(DBOperations):
             Description: This method checks for the number of columns in a given CSV file based on number of columns defined in schema object.If the CSV file does not contain specified number of columns, the CSV file is moved to bad data folder.
             Output: None
             On Failure: Logging error and raise exception
+
+            Parameters:
+            - schema: JSON object file related to schema database
         '''
         self.log_writer.log(
             self.file_object, "Start checking for number of columns in file")
-        self.schema = schema
         for file in os.listdir(self.gooddir[:-1]):
             try:
                 filename = pd.read_csv(os.path.join(self.gooddir,file))
@@ -270,7 +289,7 @@ class rawpreddatavalidation(DBOperations):
                     self.file_object, f"{file} could not be read with the following error: {e}")
                 raise Exception(
                     f"{file} could not be read with the following error: {e}")
-            if filename.shape[1] != self.schema['NumberofColumns']:
+            if filename.shape[1] != schema['NumberofColumns']:
                 try:
                     shutil.move(self.gooddir+file, self.baddir+file)
                     self.log_writer.log(
@@ -379,7 +398,7 @@ class rawpreddatavalidation(DBOperations):
             self.file_object, "Finish deleting all good_prediction_data files")
     
 
-    def bad_to_archive_data(self, archivedir):
+    def bad_to_archive_data(self):
         '''
             Method Name: bad_to_archive_data
             Description: This method transfers files contained in bad data folder to archive data folder after successfully extract compiled data from MySQL database. Note that bad data folder only stores CSV files temporarily during this pipeline execution.
@@ -388,10 +407,9 @@ class rawpreddatavalidation(DBOperations):
         '''
         self.log_writer.log(
             self.file_object, "Start moving all bad data files into archive folder")
-        self.archivedir = archivedir
         for file in os.listdir(self.baddir[:-1]):
             try:
-                shutil.move(self.baddir+file, self.archivedir+file)
+                shutil.move(self.baddir+file, self.archivefilepath+file)
                 self.log_writer.log(
                     self.file_object, f"{file} moved to archive data folder")
             except PermissionError:
@@ -408,11 +426,19 @@ class rawpreddatavalidation(DBOperations):
     
 
     def initial_data_preparation(
-        self, schemapath, folders, batchfilepath, goodfilepath, archivefilepath, finalfilepath):
+            self, schemapath, folders, batchfilepath, goodfilepath, archivefilepath, compileddatapath):
         '''
             Method Name: initial_data_preparation
             Description: This method performs all the preparation tasks for the data to be ingested into MySQL database.
             Output: None
+
+            Parameters:
+            - schemapath: String path where JSON object file related to schema database is located
+            - folders: List of string file paths for initializing folder structure
+            - batchfilepath: String file path for specified folder
+            - goodfilepath: String path where good data quality files are located
+            - archivefilepath: String path where bad data quality files are archived
+            - compileddatapath: String path where good quality data is compiled from database
         '''
         self.log_writer.log(self.file_object, "Start initial data preparation")
         self.schemapath = schemapath
@@ -420,16 +446,16 @@ class rawpreddatavalidation(DBOperations):
         self.batchfilepath = batchfilepath
         self.goodfilepath = goodfilepath
         self.archivefilepath = archivefilepath
-        self.finalfilepath = finalfilepath
-        schema = self.load_pred_schema(self.schemapath)
-        self.file_initialize(self.folders)
-        self.file_namecheck(self.batchfilepath,schema)
+        self.compileddatapath = compileddatapath
+        schema = self.load_pred_schema()
+        self.file_initialize()
+        self.file_namecheck(schema)
         self.column_count(schema)
         self.all_null_column_check()
         self.blank_with_null_replacement()
         self.newDB(schema)
         self.data_insert(self.goodfilepath)
-        self.compile_data_from_DB(self.finalfilepath)
+        self.compile_data_from_DB(self.compileddatapath)
         self.remove_temp_good_pred_data()
-        self.bad_to_archive_data(self.archivefilepath)
+        self.bad_to_archive_data()
         self.log_writer.log(self.file_object, "Finish initial data preparation")
