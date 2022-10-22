@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 13th October 2022
+Last Modified: 22nd October 2022
 '''
 
 import warnings
@@ -772,8 +772,8 @@ class model_trainer:
                     self.folderpath+ obj.__name__ +f'/HP_Importances_{obj.__name__}_Fold_{fold}.png')
                 opt_fig.write_image(
                     self.folderpath+ obj.__name__ +f'/Optimization_History_{obj.__name__}_Fold_{fold}.png')
-                joblib.dump(
-                    study, self.folderpath + obj.__name__ + f'/OptStudy_{obj.__name__}_Fold_{fold}.pkl')
+            joblib.dump(
+                study, self.folderpath + obj.__name__ + f'/OptStudy_{obj.__name__}_Fold_{fold}.pkl')
             study.trials_dataframe().to_csv(
                 self.folderpath + obj.__name__ + f"/Hyperparameter_Tuning_Results_{obj.__name__}_Fold_{fold}.csv",index=False)
             del study
