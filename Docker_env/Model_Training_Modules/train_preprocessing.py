@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 13th October 2022
+Last Modified: 25th October 2022
 '''
 
 import warnings
@@ -23,7 +23,7 @@ random_state=120
 class train_Preprocessor:
 
 
-    def __init__(self, file_object, result_dir):
+    def __init__(self, file_object, data_path, result_dir):
         '''
             Method Name: __init__
             Description: This method initializes instance of train_Preprocessor class
@@ -34,6 +34,7 @@ class train_Preprocessor:
             - result_dir: String path for storing intermediate results from running this class
         '''
         self.file_object = file_object
+        self.data_path = data_path
         self.result_dir = result_dir
         self.log_writer = App_Logger()
 
@@ -116,7 +117,7 @@ class train_Preprocessor:
         return data
     
 
-    def features_and_labels(self,data):
+    def features_and_labels(self,data,target_col):
         '''
             Method Name: features_and_labels
             Description: This method splits a pandas dataframe into two pandas objects, consist of features and target labels.
@@ -129,8 +130,8 @@ class train_Preprocessor:
         self.log_writer.log(
             self.file_object, "Start separating the data into features and labels")
         try:
-            X = data.drop(self.target_col, axis=1)
-            y = data[self.target_col]
+            X = data.drop(target_col, axis=1)
+            y = data[target_col]
         except Exception as e:
             self.log_writer.log(
                 self.file_object, f"Fail to separate features and labels with the following error: {e}")
@@ -237,11 +238,12 @@ class train_Preprocessor:
         return data
 
 
-    def eda(self, data_path, target_col):
+    def eda(self, target_col):
         '''
             Method Name: eda
             Description: This method performs exploratory data analysis on the entire dataset, while generating various plots/csv files for reference.
             Output: None
+
             Parameters:
             - data_path: String path where data compiled from database is located
             - target_col: Name of column related to target variable
@@ -254,7 +256,7 @@ class train_Preprocessor:
         scat_path = os.path.join(path, 'High_Correlation_Scatterplots')
         if not os.path.exists(scat_path):
             os.mkdir(scat_path)
-        data = self.extract_compiled_data(data_path = data_path)
+        data = self.extract_compiled_data()
         # Extract basic information about dataset
         pd.DataFrame({"name": data.columns, "non-nulls": len(data)-data.isnull().sum().values, "type": data.dtypes.values}).to_csv(self.result_dir + "EDA/Data_Info.csv",index=False)
         # Extract summary statistics about dataset
@@ -279,7 +281,7 @@ class train_Preprocessor:
         for rect in barplot.patches:
             width = rect.get_width()
             plt.text(
-                2.5+rect.get_width(), rect.get_y()+0.5*rect.get_height(),'%.2f' % width, ha='center', va='center')
+                rect.get_width(), rect.get_y()+0.5*rect.get_height(),'%.2f' % width, ha='left', va='center')
         plt.title("Proportion of zero values", fontdict={'fontsize':20})
         plt.savefig(
             self.result_dir+"EDA/Proportion of zero values",bbox_inches='tight', pad_inches=0.2)
@@ -290,7 +292,7 @@ class train_Preprocessor:
         for rect in barplot.patches:
             width = rect.get_width()
             plt.text(
-                0.03+rect.get_width(), rect.get_y()+0.5*rect.get_height(),'%.2f' % width, ha='center', va='center')
+                rect.get_width(), rect.get_y()+0.5*rect.get_height(),'%.2f' % width, ha='left', va='center')
         plt.title("Proportion of null values", fontdict={'fontsize':20})
         plt.savefig(
             self.result_dir+"EDA/Proportion of null values",bbox_inches='tight', pad_inches=0.2)
@@ -349,8 +351,7 @@ class train_Preprocessor:
             self.file_object, 'Finish performing exploratory data analysis')
 
 
-    def data_preprocessing(
-            self, data_path, col_drop_path, index_col, target_col):
+    def data_preprocessing(self, col_drop_path, index_col, target_col):
         '''
             Method Name: data_preprocessing
             Description: This method performs all the data preprocessing tasks for the data.
@@ -363,14 +364,13 @@ class train_Preprocessor:
             - target_col: Name of column related to target variable
         '''
         self.log_writer.log(self.file_object, 'Start of data preprocessing')
-        self.data_path = data_path
         self.col_drop_path = col_drop_path
         self.index_col = index_col
         self.target_col = target_col
         data = self.extract_compiled_data()
         data = self.remove_irrelevant_columns(data = data)
         data = self.remove_duplicated_rows(data = data)
-        X, y = self.features_and_labels(data = data)
+        X, y = self.features_and_labels(data = data, target_col=self.target_col)
         y = y.replace(-1,0)
         continuous_columns = X._get_numeric_data().columns.tolist()
         X = self.add_missing_indicator(data = X)

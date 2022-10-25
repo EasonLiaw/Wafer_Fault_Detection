@@ -1,6 +1,6 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 22nd October 2022
+Last Modified: 25th October 2022
 '''
 
 import warnings
@@ -46,9 +46,7 @@ from Application_Logger.logger import App_Logger
 from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import pairwise_distances
 
-
 random_state=120
-
 
 class model_trainer:
 
@@ -322,6 +320,7 @@ class model_trainer:
             clf,pipeline,X_train_data,y_train_data,cv_jobs=3)
         model_trainer.setting_attributes(trial,cv_results)
         return np.nanmean(cv_results['test_f1_score'])
+
 
     def svc_objective(
             trial,X_train_data,y_train_data, continuous_columns, continuous_index, categorical_columns, categorical_index):
@@ -1409,7 +1408,7 @@ class OutlierCapTransformer(BaseEstimator, TransformerMixin, CheckGaussian):
     def __init__(self, continuous):
         '''
             Method Name: __init__
-            Description: This method initializes instance of MissingTransformer class
+            Description: This method initializes instance of OutlierCapTransformer class
             Output: None
 
             Parameters:
@@ -1655,7 +1654,7 @@ class FeatureSelectionTransformer(BaseEstimator, TransformerMixin):
             self, method, drop_correlated, continuous, categorical, model, scaling_indicator= 'no', cluster_indicator= 'no', damping = None, number=None):
         '''
             Method Name: __init__
-            Description: This method initializes instance of MissingTransformer class
+            Description: This method initializes instance of FeatureSelectionTransformer class
             Output: None
 
             Parameters:
