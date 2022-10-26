@@ -105,21 +105,25 @@ For model evaluation on binary classification, the following metrics are used in
 
 All plots generated from this section can be found in Intermediate_Train_Results/EDA folder.
 
-#### i. Basic metadata of dataset
+##### i. Basic metadata of dataset
 On initial inspection, the current dataset used in this project has a total of 591 features and 1 target label ("Output"). A single "Wafer" feature has "object" data type, which represents unique identifier of a given record and the remaining features have "float" data type that initially indicates continuous features.
 
+##### ii. Target variable distribution
 ![Target_Class_Distribution](https://user-images.githubusercontent.com/34255556/194898271-511dc280-e6ee-4d67-a053-500d3386cdd0.png)
 
 From the diagram above, there is a very clear indication of target imbalance between class -1 (non-faulty) and class 1 (faulty) for binary classification. This indicates that target imbalancing needs to be addressed during model training.
 
+##### iii. Missing values
 ![Proportion of null values](https://user-images.githubusercontent.com/34255556/194897104-3d6291f7-6431-4f83-bf8b-93fe34a724d9.png)
 
 From the diagram above, features with missing values identified have missing proportions approximately grouped into one of the following: 1%, 2%, 3%, 6%, 9%, 34%, 60%, 63%, 67%, 73% and 92%.
 
+##### iv. Zero values
 ![Proportion of zero values](https://user-images.githubusercontent.com/34255556/194897249-72e62b69-0c87-4b8e-a1b1-fa584eef23c3.png)
 
 On another note, there's more than 120 features identified having more than 98% of zero values from the figure above, which might suggest that those features have very little variance which are not relevant for model training.
 
+##### v. Correlation analysis
 From performing spearman correlation analysis, there are 393 pairs of features having high spearman correlation (with absolute value of greater than 0.8) with one another. The scatterplot diagram below shows an example of two features having very high positive and negative spearman correlation with one another respectively:
 <p float="left">
 <img src="https://user-images.githubusercontent.com/34255556/194897320-8f23f3b7-6a8e-436e-af9d-9cd5d12ebe37.png" width="400">
@@ -128,7 +132,8 @@ From performing spearman correlation analysis, there are 393 pairs of features h
 
 Although there are many pairs of features having high correlation with one another, this doesn't mean that those features with high correlation with other features should be removed from the dataset, which may result in sub-optimal model performance along with feature selection. More scatterplot diagrams can be found within EDA folder, which shows other pairs of features that have high spearman correlation.
 
-Furthermore, the following sets of plots are created for every feature of the dataset:
+##### vi. Numerical Features
+The following sets of plots are created for every numerical feature of the dataset:
 1. Box plot
 2. Box plot by target label
 3. Bar plot (Number of missing values by target label) - For features with missing values
