@@ -1,10 +1,12 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 14th October 2022
+Last Modified: 30th October 2022
 '''
 
 import pandas as pd
 from Application_Logger.logger import App_Logger
+from Application_Logger.exception import CustomException
+import sys
 
 class model_predictor:
 
@@ -50,9 +52,7 @@ class model_predictor:
             pred_results.to_csv(
                 'Intermediate_Pred_Results/Predictions.csv',index=False)
         except Exception as e:
-            self.log_writer.log(
-                self.file_object, f'Fail to make prediction using best models identified on given data batch with the following error: {e}')
-            raise Exception(
-                f'Fail to make prediction using best models identified on given data batch with the following error: {e}')
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, 'Finish performing model prediction using best model identified on given data batch.')

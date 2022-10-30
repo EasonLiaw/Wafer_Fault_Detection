@@ -1,13 +1,15 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 14th October 2022
+Last Modified: 30th October 2022
 '''
 
 import warnings
 warnings.filterwarnings('ignore')
 import pandas as pd
 from Application_Logger.logger import App_Logger
+from Application_Logger.exception import CustomException
 import joblib
+import sys
 import numpy as np
 
 class pred_Preprocessor:
@@ -38,10 +40,8 @@ class pred_Preprocessor:
         try:
             data = pd.read_csv(self.data_path)
         except Exception as e:
-            self.log_writer.log(
-                self.file_object, f"Fail to read compiled data from database with the following error: {e}")
-            raise Exception(
-                f"Fail to read compiled data from database with the following error: {e}")
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish reading compiled data from database")
         return data
@@ -68,9 +68,8 @@ class pred_Preprocessor:
                 data = data.drop_duplicates(ignore_index=True)
             except Exception as e:
                 self.log_writer.log(
-                    self.file_object, f"Fail to remove duplicated rows with the following error: {e}")
-                raise Exception(
-                    f"Fail to remove duplicated rows with the following error: {e}")
+                    self.file_object, str(CustomException(e,sys)))
+                raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish handling duplicated rows in the dataset")
         return data

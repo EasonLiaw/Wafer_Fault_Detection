@@ -1,13 +1,14 @@
 '''
 Author: Liaw Yi Xian
-Last Modified: 14th October 2022
+Last Modified: 30th October 2022
 '''
 
-import os, shutil, json
+import os, shutil, json, sys
 import pandas as pd
 import mysql.connector
 import csv
 from Application_Logger.logger import App_Logger
+from Application_Logger.exception import CustomException
 import DBConnectionSetup as login
 
 class DBOperations:
@@ -61,23 +62,17 @@ class DBOperations:
                         self.log_writer.log(
                             self.file_object, f"Column {name} already exists in {self.tablename} table")
                 else:
-                    try:
-                        mycursor.execute(
-                            f"CREATE TABLE {self.tablename} ({name} {type})")
-                        self.log_writer.log(
-                            self.file_object, f"{self.tablename} table created with column {name}")
-                    except Exception as e:
-                        self.log_writer.log(
-                            self.file_object, f"SQL server has error of creating new table {self.tablename} with the following error: {e}")
+                    mycursor.execute(
+                        f"CREATE TABLE {self.tablename} ({name} {type})")
+                    self.log_writer.log(
+                        self.file_object, f"{self.tablename} table created with column {name}")
         except ConnectionError:
             self.log_writer.log(
                 self.file_object, "Error connecting to SQL database")
             raise Exception("Error connecting to SQL database")
         except Exception as e:
-            self.log_writer.log(
-                self.file_object, f"The following error occured when creating new SQL database: {e}")
-            raise Exception(
-                f"The following error occured when creating new SQL database: {e}")
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         conn.close()
         self.log_writer.log(
             self.file_object, f"Finish creating new table({self.tablename}) in SQL database ({self.dbname})")
@@ -120,13 +115,12 @@ class DBOperations:
                 self.file_object, "Error connecting to SQL database")
             raise Exception("Error connecting to SQL database")
         except Exception as e:
-            self.log_writer.log(
-                self.file_object, f"The following error occured when inserting good prediction data into SQL database: {e}")
-            raise Exception(
-                f"The following error occured when inserting good prediction data into SQL database: {e}")
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         conn.close()
         self.log_writer.log(
             self.file_object, "Finish inserting new good prediction data into SQL database")
+
 
     def compile_data_from_DB(self,compiledir):
         '''
@@ -151,10 +145,8 @@ class DBOperations:
                 self.file_object, "Error connecting to SQL database")
             raise Exception("Error connecting to SQL database")
         except Exception as e:
-            self.log_writer.log(
-                self.file_object, f"The following error occured when compiling good prediction data into a new CSV file: {e}")
-            raise Exception(
-                f"The following error occured when compiling good prediction data into a new CSV file: {e}")
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         conn.close()
         self.log_writer.log(
             self.file_object, "Finish writing compiled good prediction data into a new CSV file")
@@ -169,7 +161,6 @@ class rawpreddatavalidation(DBOperations):
             Description: This method initializes instance of rawpreddatavalidation class, while inheriting methods 
             from DBOperations class
             Output: None
-            On Failure: Logging error and raise exception
 
             Parameters:
             - tablename: String name of table to create in a given database
@@ -195,10 +186,8 @@ class rawpreddatavalidation(DBOperations):
             with open(self.schemapath, 'r') as f:
                 schema = json.load(f)
         except Exception as e:
-            self.log_writer.log(
-                self.file_object, f"Prediction schema fail to load with the following error: {e}")
-            raise Exception(
-                f"Prediction schema fail to load with the following error: {e}")
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish loading prediction schema")
         return schema
@@ -221,10 +210,8 @@ class rawpreddatavalidation(DBOperations):
                 self.log_writer.log(
                     self.file_object, f"Folder {folder} has been initialized")
             except Exception as e:
-                self.log_writer.log(
-                    self.file_object, f"Folder {folder} could not be initialized with the following error: {e}")
-                raise Exception(
-                    f"Folder {folder} could not be initialized with the following error: {e}")
+                self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+                raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish initializing folder structure")
     
@@ -241,30 +228,22 @@ class rawpreddatavalidation(DBOperations):
         '''
         self.log_writer.log(
             self.file_object, "Start checking for valid name of files")
-        for file in os.listdir(self.batchfilepath):
-            filename = file.split(".csv")[0].split('_')
-            if len(filename)!=3 or filename[0] != 'wafer' or len(filename[1])!=schema['LengthOfDateStampInFile'] or len(filename[2])!=schema['LengthOfTimeStampInFile']:
-                try:
+        try:
+            for file in os.listdir(self.batchfilepath):
+                filename = file.split(".csv")[0].split('_')
+                if len(filename)!=3 or filename[0] != 'wafer' or len(filename[1])!=schema['LengthOfDateStampInFile'] or len(filename[2])!=schema['LengthOfTimeStampInFile']:
                     shutil.copyfile(
                         self.batchfilepath+"/"+file, self.baddir+file)
                     self.log_writer.log(
                         self.file_object, f"{file} moved to bad data folder due to invalid file name")
-                except Exception as e:
-                    self.log_writer.log(
-                        self.file_object, f"{file} could not be moved to bad data folder with the following error: {e}")
-                    raise Exception(
-                        f"{file} could not be moved to bad data folder with the following error: {e}")
-            else:
-                try:
+                else:
                     shutil.copyfile(
                         self.batchfilepath+"/"+file, self.gooddir+file)
                     self.log_writer.log(
                         self.file_object, f"{file} moved to good data folder")
-                except Exception as e:
-                    self.log_writer.log(
-                        self.file_object, f"{file} could not be moved to good data folder with the following error: {e}")
-                    raise Exception(
-                        f"{file} could not be moved to good data folder with the following error: {e}")
+        except Exception as e:
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish checking for valid name of files")
 
@@ -301,9 +280,8 @@ class rawpreddatavalidation(DBOperations):
                         f"{file} is open, please close and try again")
                 except Exception as e:
                     self.log_writer.log(
-                        self.file_object, f"{file} file fail to move to bad data folder with the following error: {e}")
-                    raise Exception(
-                        f"{file} file fail to move to bad data folder with the following error: {e}")
+                        self.file_object, str(CustomException(e,sys)))
+                    raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish checking for number of columns in file")
     
@@ -355,16 +333,14 @@ class rawpreddatavalidation(DBOperations):
         '''
         self.log_writer.log(
             self.file_object, "Start replacing missing values with null keyword")
-        for file in os.listdir(self.gooddir[:-1]):
-            try:
+        try:
+            for file in os.listdir(self.gooddir[:-1]):
                 filename = pd.read_csv(os.path.join(self.gooddir,file))
                 filename.fillna('null', inplace=True)
                 filename.to_csv(self.gooddir+file, index=False)
-            except Exception as e:
-                self.log_writer.log(
-                    self.file_object, f"Replacing missing values with null keyword for file {file} fail with the following error: {e}")
-                raise Exception(
-                    f"Replacing missing values with null keyword for file {file} fail with the following error: {e}")
+        except Exception as e:
+            self.log_writer.log(self.file_object, str(CustomException(e,sys)))
+            raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish replacing missing values with null keyword")
     
@@ -391,9 +367,8 @@ class rawpreddatavalidation(DBOperations):
                     f"{file} file is open, please close and try again")
             except Exception as e:
                 self.log_writer.log(
-                    self.file_object, f"{file} file fail to delete with the following error: {e}")
-                raise Exception(
-                    f"{file} file fail to delete with the following error: {e}")
+                    self.file_object, str(CustomException(e,sys)))
+                raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish deleting all good_prediction_data files")
     
@@ -418,9 +393,8 @@ class rawpreddatavalidation(DBOperations):
                 raise Exception(f"{file} is open, please close and try again")
             except Exception as e:
                 self.log_writer.log(
-                    self.file_object, f"{file} file fail to move to archive with the following error: {e}")
-                raise Exception(
-                    f"{file} file fail to move to archive with the following error: {e}")
+                    self.file_object, str(CustomException(e,sys)))
+                raise CustomException(e,sys)
         self.log_writer.log(
             self.file_object, "Finish moving all bad data files into archive folder")
     
